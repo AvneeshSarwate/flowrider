@@ -22,7 +22,9 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
+      console.log('FlowViewProvider received message:', message);
       if (message.type === 'openLocation') {
+        console.log('Opening file:', message.filePath, 'at line:', message.lineNumber);
         await this.openFileAtLine(message.filePath, message.lineNumber);
       }
 

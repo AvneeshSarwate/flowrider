@@ -32,6 +32,7 @@ function App() {
   }, [setFlows]);
 
   const handleOpenLocation = (filePath: string, lineNumber: number) => {
+    console.log('handleOpenLocation', filePath, lineNumber);
     vscode?.postMessage({ type: 'openLocation', filePath, lineNumber });
   };
 
