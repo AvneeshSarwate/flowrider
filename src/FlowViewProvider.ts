@@ -3,6 +3,10 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ExtensionMessage, FlowGraph, MalformedComment, WebviewMessage } from './types';
 
+// Must match webview-ui/vite.config.ts. Override with FLOWRIDER_DEV_PORT env var.
+const DEV_SERVER_PORT = parseInt(process.env.FLOWRIDER_DEV_PORT || '5199', 10);
+const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
+
 export class FlowViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = 'flowrider.flowsView';
 
@@ -12,6 +16,10 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
+  private get isDev(): boolean {
+    return this.context.extensionMode === vscode.ExtensionMode.Development;
+  }
+
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     this.view = webviewView;
     webviewView.webview.options = {
@@ -20,6 +28,10 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
     };
 
     webviewView.webview.html = this.getHtml(webviewView.webview);
+
+    if (this.isDev) {
+      this.setupDevModeFileWatcher(webviewView);
+    }
 
     webviewView.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
       console.log('FlowViewProvider received message:', message);
@@ -68,7 +80,66 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
     );
   }
 
+  private setupDevModeFileWatcher(webviewView: vscode.WebviewView) {
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      new vscode.RelativePattern(
+        vscode.Uri.joinPath(this.context.extensionUri, 'out'),
+        '**/*.js'
+      )
+    );
+
+    const reload = () => {
+      webviewView.webview.html = this.getHtml(webviewView.webview);
+      this.pushFlows();
+    };
+
+    watcher.onDidChange(reload);
+    webviewView.onDidDispose(() => watcher.dispose());
+  }
+
   private getHtml(webview: vscode.Webview): string {
+    if (this.isDev) {
+      return this.getDevHtml(webview);
+    }
+    return this.getProdHtml(webview);
+  }
+
+  private getDevHtml(_webview: vscode.Webview): string {
+    const csp = `
+      default-src 'none';
+      img-src data: ${DEV_SERVER_URL};
+      style-src 'unsafe-inline' ${DEV_SERVER_URL};
+      font-src data:;
+      script-src 'unsafe-inline' ${DEV_SERVER_URL};
+      connect-src ${DEV_SERVER_URL} ws://localhost:${DEV_SERVER_PORT};
+    `;
+
+    const reactRefresh = `
+      <script type="module">
+        import RefreshRuntime from "${DEV_SERVER_URL}/@react-refresh"
+        RefreshRuntime.injectIntoGlobalHook(window)
+        window.$RefreshReg$ = () => {}
+        window.$RefreshSig$ = () => (type) => type
+        window.__vite_plugin_react_preamble_installed__ = true
+      </script>
+    `;
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="${csp.replace(/\n/g, '')}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="root"></div>
+  ${reactRefresh}
+  <script type="module" src="${DEV_SERVER_URL}/src/main.tsx"></script>
+</body>
+</html>`;
+  }
+
+  private getProdHtml(webview: vscode.Webview): string {
     const manifestPath = path.join(this.context.extensionPath, 'media', 'manifest.json');
 
     let scriptPath = 'index.js';

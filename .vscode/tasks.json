@@ -11,6 +11,26 @@
 			}
 		},
 		{
+			"label": "dev:webview",
+			"type": "npm",
+			"script": "dev",
+			"path": "webview-ui",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "^$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "VITE",
+					"endsPattern": "ready in"
+				}
+			},
+			"presentation": {
+				"reveal": "silent"
+			}
+		},
+		{
 			"label": "watch:extension",
 			"type": "npm",
 			"script": "watch",
@@ -28,6 +48,12 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "dev-all",
+			"dependsOn": ["dev:webview", "watch:extension"],
+			"dependsOrder": "parallel",
+			"group": "build"
 		}
 	]
 }
