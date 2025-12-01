@@ -74,6 +74,7 @@ const FlowDiagram: React.FC<Props> = ({ flow, onNodeClick }) => {
 
     const render = async () => {
       try {
+        console.log('Mermaid definition:', definition);
         const { svg } = await mermaid.render(chartId, definition);
         if (isCancelled || !containerRef.current) {
           return;
@@ -99,7 +100,7 @@ const FlowDiagram: React.FC<Props> = ({ flow, onNodeClick }) => {
         if (containerRef.current) {
           containerRef.current.innerHTML = `<div class="diagram-error">Unable to render Mermaid diagram</div>`;
         }
-        console.error('Mermaid render failed', error);
+        console.error('Mermaid render failed', error, 'Definition was:', definition);
       }
     };
 

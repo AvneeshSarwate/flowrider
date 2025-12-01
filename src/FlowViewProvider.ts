@@ -98,7 +98,7 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
       img-src ${webview.cspSource} data:;
       style-src ${webview.cspSource} 'unsafe-inline';
       font-src ${webview.cspSource} data:;
-      script-src 'nonce-${nonce}';
+      script-src ${webview.cspSource};
     `;
 
     return `<!DOCTYPE html>

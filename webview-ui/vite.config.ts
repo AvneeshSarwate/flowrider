@@ -7,6 +7,15 @@ export default defineConfig({
   build: {
     outDir: '../media',
     emptyOutDir: true,
-    manifest: true
-  }
+    manifest: true,
+    rollupOptions: {
+      output: {
+        // Inline dynamic imports to avoid CSP issues with mermaid
+        inlineDynamicImports: true,
+      },
+    },
+  },
+  optimizeDeps: {
+    include: ['mermaid'],
+  },
 })

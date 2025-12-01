@@ -16,6 +16,15 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "flowrider",
+          "title": "Flow Rider",
+          "icon": "media/flowrider-icon.svg"
+        }
+      ]
+    },
     "configuration": {
       "title": "FlowRider",
       "properties": {
@@ -33,11 +42,11 @@
       }
     },
     "views": {
-      "explorer": [
+      "flowrider": [
         {
           "type": "webview",
           "id": "flowrider.flowsView",
-          "name": "Flow Rider"
+          "name": "Flows"
         }
       ]
     },
