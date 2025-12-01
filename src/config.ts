@@ -12,5 +12,5 @@ export function getFlowTag(): string {
 export function getDebounceMs(): number {
   return vscode.workspace
     .getConfiguration(CONFIG_SECTION)
-    .get<number>('debounceMs', 500);
+    .get<number>('debounceMs', 100);
 }

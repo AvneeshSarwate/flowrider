@@ -1,71 +1,89 @@
-# flowrider README
+# Flow Rider
 
-This is the README for your extension "flowrider". After writing up a brief description, we recommend including the following sections.
+A VS Code extension for visualizing and navigating code flows. Write specially formatted comments to describe how data or control flows through your codebase, and Flow Rider will parse them into interactive Mermaid diagrams.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Flow Comments
 
-For example if there is an image subfolder under your extension project workspace:
+Add comments anywhere in your code using this format:
 
-\!\[feature X\]\(images/feature-x.png\)
+```
+TAG FLOW_NAME : CURRENT_POS => NEXT_POS
+```
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+**Example:**
+```javascript
+// #@#@#@ auth-flow : validate_token => check_permissions
+function validateToken(token) {
+  // ...
+}
+
+// #@#@#@ auth-flow : check_permissions => authorize
+function checkPermissions(user) {
+  // ...
+}
+
+// #@#@#@ auth-flow : check_permissions => deny
+function denyAccess() {
+  // ...
+}
+```
+
+- **TAG**: A unique string to identify flow comments (default: `#@#@#@`)
+- **FLOW_NAME**: The name of the flow (groups related comments into one diagram)
+- **CURRENT_POS**: The "logical node" where this comment is located
+- **NEXT_POS**: The next "logical node" in the flow
+
+Flows can branch, merge, and contain cycles.
+
+### Sidebar View
+
+Click the Flow Rider icon in the activity bar to open the sidebar. You'll see:
+
+- **Flow List**: All detected flows as collapsible sections
+- **Mermaid Diagrams**: Expand a flow to see its visual graph
+- **Interactive Nodes**: Click any node to see all locations where it appears
+- **Jump to Code**: Click a location to open that file at the exact line
+
+### Automatic Scanning
+
+Flow Rider automatically rescans your workspace when you save any file. The scan uses ripgrep for fast searching across large codebases.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **ripgrep**: Must be installed and available in your system PATH
+  - macOS: `brew install ripgrep`
+  - Ubuntu/Debian: `apt install ripgrep`
+  - Windows: `choco install ripgrep` or `scoop install ripgrep`
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `flowrider.tag` | `#@#@#@` | Tag used to identify flow comments |
+| `flowrider.debounceMs` | `500` | Delay (ms) to debounce workspace rescans after saves |
 
-For example:
+## Usage Tips
 
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- Use descriptive node names that reflect what happens at each point
+- Group related functionality into the same flow
+- Use multiple flows to document different aspects of your system (e.g., `auth-flow`, `data-flow`, `error-handling`)
+- The sidebar shows parsing errors at the bottom if any comments are malformed
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Requires ripgrep to be installed separately
+- Very large codebases may experience slight delays during scanning
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Initial release:
+- Flow comment parsing with configurable tag
+- Mermaid diagram visualization
+- Interactive node clicking with location popup
+- Jump-to-code navigation
+- Automatic workspace scanning on file save
+- Parsing error display
