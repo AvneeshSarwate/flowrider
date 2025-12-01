@@ -11,6 +11,7 @@ const toFilename = (filePath: string) => filePath.split(/[\\/]/).pop() ?? filePa
 function App() {
   const flows = useFlowStore((state) => state.flows);
   const malformed = useFlowStore((state) => state.malformed);
+  const setHydrated = useFlowStore((state) => state.setHydrated);
   const selectedNode = useFlowStore((state) => state.selectedNode);
   const setFlows = useFlowStore((state) => state.setFlows);
   const clearSelection = useFlowStore((state) => state.clearSelection);
@@ -20,6 +21,9 @@ function App() {
       const message = event.data;
       if (message?.type === 'flowsUpdated') {
         setFlows(message.flows, message.malformed ?? []);
+      }
+      if (message?.type === 'hydratedFlow') {
+        setHydrated(message.flowName, message.hydrated);
       }
     };
 

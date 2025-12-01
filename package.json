@@ -12,7 +12,11 @@
   "activationEvents": [
     "onStartupFinished",
     "onView:flowrider.flowsView",
-    "onCommand:flowrider.refreshFlows"
+    "onCommand:flowrider.refreshFlows",
+    "onCommand:flowrider.hydrateFlow",
+    "onCommand:flowrider.clearHydration",
+    "onCommand:flowrider.writeFlowToDb",
+    "onCommand:flowrider.hydrateFlowByName"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -38,6 +42,22 @@
           "default": 500,
           "minimum": 0,
           "description": "Delay (ms) to debounce workspace rescans after saves"
+        },
+        "flowrider.dbPath": {
+          "type": "string",
+          "default": ".codeflows/flows.jsonc",
+          "description": "Relative path to the local flow database file"
+        },
+        "flowrider.contextLines": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "description": "Number of context lines to capture before/after a flow comment"
+        },
+        "flowrider.globalDbPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to a global flow database (future use)"
         }
       }
     },
@@ -54,6 +74,22 @@
       {
         "command": "flowrider.refreshFlows",
         "title": "FlowRider: Refresh Flows"
+      },
+      {
+        "command": "flowrider.hydrateFlow",
+        "title": "FlowRider: Hydrate Flow"
+      },
+      {
+        "command": "flowrider.clearHydration",
+        "title": "FlowRider: Clear Hydration Decorations"
+      },
+      {
+        "command": "flowrider.writeFlowToDb",
+        "title": "FlowRider: Write Flow To DB (single flow)"
+      },
+      {
+        "command": "flowrider.hydrateFlowByName",
+        "title": "FlowRider: Hydrate Flow By Name"
       }
     ]
   },
@@ -70,12 +106,18 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
+    "@types/string-similarity": "^4.0.2",
     "@types/vscode": "^1.106.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",
     "eslint": "^9.39.1",
-    "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3"
+  },
+  "dependencies": {
+    "diff": "^8.0.2",
+    "jsonc-parser": "^3.3.1",
+    "string-similarity": "^4.0.4",
+    "typescript": "^5.9.3"
   }
 }

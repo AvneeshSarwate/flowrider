@@ -1,8 +1,8 @@
-import type { FlowGraph } from '../types';
+import type { FlowSummary } from '../types';
 import type { Selection } from '../store';
 
 interface Props {
-  flows: FlowGraph[];
+  flows: FlowSummary[];
   selection: Selection | null;
   onClose: () => void;
   onOpenLocation: (filePath: string, lineNumber: number) => void;

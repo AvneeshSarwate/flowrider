@@ -12,6 +12,18 @@ export interface FlowGraph {
   nodes: string[];
 }
 
+export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded';
+
+export interface FlowSummary extends FlowGraph {
+  id: string;
+  status: FlowLoadStatus;
+  present: number;
+  total: number;
+  extras: number;
+  declaredCross: boolean;
+  isCross: boolean;
+}
+
 export interface MalformedComment {
   filePath: string;
   lineNumber: number;
@@ -22,10 +34,57 @@ export interface MalformedComment {
 export type ExtensionMessage =
   | {
       type: 'flowsUpdated';
-      flows: FlowGraph[];
+      flows: FlowSummary[];
       malformed: MalformedComment[];
+    }
+  | {
+      type: 'hydratedFlow';
+      flowName: string;
+      hydrated: HydratedFlow;
     };
 
 export type WebviewMessage =
   | { type: 'openLocation'; filePath: string; lineNumber: number }
-  | { type: 'requestFlows' };
+  | { type: 'requestFlows' }
+  | { type: 'writeFlowToDb'; flowName: string }
+  | { type: 'hydrateFlowFromDb'; flowName: string }
+  | { type: 'requestHydrateFlow'; flowName: string }
+  | { type: 'resolveCandidate'; flowName: string; annotationId: string; line: number }
+  | { type: 'addCandidateComment'; flowName: string; annotationId: string; line: number };
+
+// Hydration payloads
+export type ResolutionStatus =
+  | { kind: 'auto'; line: number; confidence: number; source: string }
+  | { kind: 'candidates'; candidates: MatchCandidate[] }
+  | { kind: 'unmapped'; reason: string; note?: string };
+
+export interface MatchCandidate {
+  line: number;
+  score: number;
+  source: string;
+  snippet?: string;
+  symbol?: string;
+}
+
+export interface Annotation {
+  id: string;
+  filePath: string;
+  flowName: string;
+  currentNode: string;
+  nextNode: string;
+  rawComment: string;
+  contextBefore: string[];
+  contextLine: string;
+  contextAfter: string[];
+  commitHash: string;
+}
+
+export interface HydratedAnnotation {
+  annotation: Annotation;
+  resolution: ResolutionStatus;
+}
+
+export interface HydratedFlow {
+  flow: { id: string; name: string };
+  annotations: HydratedAnnotation[];
+}

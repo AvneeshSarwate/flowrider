@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ExtensionMessage, FlowGraph, MalformedComment, WebviewMessage } from './types';
+import { ExtensionMessage, FlowSummary, MalformedComment, WebviewMessage } from './types';
 
 // Must match webview-ui/vite.config.ts. Override with FLOWRIDER_DEV_PORT env var.
 const DEV_SERVER_PORT = parseInt(process.env.FLOWRIDER_DEV_PORT || '5199', 10);
@@ -11,7 +11,7 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewId = 'flowrider.flowsView';
 
   private view?: vscode.WebviewView;
-  private flows: FlowGraph[] = [];
+  private flows: FlowSummary[] = [];
   private malformed: MalformedComment[] = [];
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -43,12 +43,32 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
       if (message.type === 'requestFlows') {
         this.pushFlows();
       }
+
+      if (message.type === 'writeFlowToDb') {
+        await vscode.commands.executeCommand('flowrider.writeFlowToDb', message.flowName);
+      }
+
+      if (message.type === 'hydrateFlowFromDb') {
+        await vscode.commands.executeCommand('flowrider.hydrateFlowByName', message.flowName);
+      }
+
+      if (message.type === 'requestHydrateFlow') {
+        await vscode.commands.executeCommand('flowrider.previewHydrateFlow', message.flowName);
+      }
+
+      if (message.type === 'resolveCandidate') {
+        await vscode.commands.executeCommand('flowrider.resolveCandidate', message.flowName, message.annotationId, message.line);
+      }
+
+      if (message.type === 'addCandidateComment') {
+        await vscode.commands.executeCommand('flowrider.addCandidateComment', message.flowName, message.annotationId, message.line);
+      }
     });
 
     this.pushFlows();
   }
 
-  update(flows: FlowGraph[], malformed: MalformedComment[]): void {
+  update(flows: FlowSummary[], malformed: MalformedComment[]): void {
     this.flows = flows;
     this.malformed = malformed;
     this.pushFlows();
@@ -68,8 +88,21 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
     this.view.webview.postMessage(payload);
   }
 
+  pushHydrated(flowName: string, hydrated: import('./types').HydratedFlow) {
+    if (!this.view) return;
+    const payload: ExtensionMessage = {
+      type: 'hydratedFlow',
+      flowName,
+      hydrated,
+    };
+    this.view.webview.postMessage(payload);
+  }
+
   private async openFileAtLine(filePath: string, line: number) {
-    const uri = vscode.Uri.file(filePath);
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const root = workspaceFolders && workspaceFolders[0]?.uri.fsPath;
+    const resolved = path.isAbsolute(filePath) || !root ? filePath : path.join(root, filePath);
+    const uri = vscode.Uri.file(resolved);
     const document = await vscode.workspace.openTextDocument(uri);
     const editor = await vscode.window.showTextDocument(document);
     const position = new vscode.Position(line - 1, 0);

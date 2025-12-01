@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef } from 'react';
 import mermaid from 'mermaid';
-import type { FlowGraph } from '../types';
+import type { FlowSummary } from '../types';
 
 const hashValue = (value: string) => {
   let hash = 0;
@@ -18,7 +18,7 @@ const sanitizeId = (value: string) => {
 const escapeLabel = (value: string) => value.replace(/"/g, '&quot;');
 
 interface Props {
-  flow: FlowGraph;
+  flow: FlowSummary;
   onNodeClick: (nodeName: string) => void;
 }
 

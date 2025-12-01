@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { FlowGraph, MalformedComment } from './types';
+import type { FlowSummary, HydratedFlow, MalformedComment } from './types';
 
 export interface Selection {
   flowName: string;
@@ -7,11 +7,13 @@ export interface Selection {
 }
 
 export interface FlowUIStore {
-  flows: FlowGraph[];
+  flows: FlowSummary[];
+  hydrated: Map<string, HydratedFlow>;
   malformed: MalformedComment[];
   expandedFlows: Set<string>;
   selectedNode: Selection | null;
-  setFlows: (flows: FlowGraph[], malformed: MalformedComment[]) => void;
+  setFlows: (flows: FlowSummary[], malformed: MalformedComment[]) => void;
+  setHydrated: (flowName: string, hydrated: HydratedFlow) => void;
   toggleFlow: (flowName: string) => void;
   selectNode: (selection: Selection) => void;
   clearSelection: () => void;
@@ -19,6 +21,7 @@ export interface FlowUIStore {
 
 export const useFlowStore = create<FlowUIStore>((set) => ({
   flows: [],
+  hydrated: new Map<string, HydratedFlow>(),
   malformed: [],
   expandedFlows: new Set<string>(),
   selectedNode: null,
@@ -33,9 +36,16 @@ export const useFlowStore = create<FlowUIStore>((set) => ({
 
       return {
         flows,
+        hydrated: new Map<string, HydratedFlow>(),
         malformed,
         expandedFlows: nextExpanded,
       };
+    }),
+  setHydrated: (flowName, hydrated) =>
+    set((state) => {
+      const next = new Map(state.hydrated);
+      next.set(flowName, hydrated);
+      return { hydrated: next };
     }),
   toggleFlow: (flowName: string) =>
     set((state) => {

@@ -1,15 +1,19 @@
-import type { FlowGraph } from '../types';
+import type { FlowSummary } from '../types';
 import { useFlowStore } from '../store';
 import FlowDiagram from './FlowDiagram';
+import vscode from '../vscode';
+import { useFlowStore } from '../store';
+import IssuesPanel from './IssuesPanel';
 
 interface Props {
-  flows: FlowGraph[];
+  flows: FlowSummary[];
 }
 
 const FlowList: React.FC<Props> = ({ flows }) => {
   const expanded = useFlowStore((state) => state.expandedFlows);
   const toggleFlow = useFlowStore((state) => state.toggleFlow);
   const selectNode = useFlowStore((state) => state.selectNode);
+  const hydrated = useFlowStore((state) => state.hydrated);
 
   if (flows.length === 0) {
     return null;
@@ -21,22 +25,82 @@ const FlowList: React.FC<Props> = ({ flows }) => {
         const isOpen = expanded.has(flow.name);
         return (
           <div className="flow-card" key={flow.name}>
-            <button className="flow-header" onClick={() => toggleFlow(flow.name)}>
-              <div className="flow-meta">
-                <div className="flow-name">{flow.name}</div>
-                <div className="flow-subtitle">
-                  {flow.nodes.length} nodes · {flow.edges.length} edges
+            <div className="flow-header">
+              <button className="flow-header-main" onClick={() => toggleFlow(flow.name)}>
+                <div className="flow-meta">
+                  <div className="flow-name">
+                    {flow.name}
+                    <span className={`badge status-${flow.status}`}>{flow.status}</span>
+                    {flow.declaredCross && <span className="badge badge-cross">cross</span>}
+                  </div>
+                  <div className="flow-subtitle">
+                    {flow.nodes.length} nodes · {flow.edges.length} edges · {flow.present}/
+                    {flow.total} loaded{flow.extras > 0 ? ` · ${flow.extras} extra` : ''}
+                  </div>
                 </div>
+                <div className="chevron" aria-hidden>
+                  {isOpen ? '▾' : '▸'}
+                </div>
+              </button>
+              <div className="flow-actions">
+                <button
+                  className="ghost-button"
+                  title="Write this flow to DB (export only this flow)"
+                  onClick={() => vscode?.postMessage({ type: 'writeFlowToDb', flowName: flow.name })}
+                >
+                  ⬇︎ DB
+                </button>
+                <button
+                  className="ghost-button"
+                  title="Hydrate this flow into source files"
+                  onClick={() =>
+                    vscode?.postMessage({ type: 'hydrateFlowFromDb', flowName: flow.name })
+                  }
+                >
+                  ⬆︎ Code
+                </button>
+                <button
+                  className="ghost-button"
+                  title="Preview/hydrate this flow (compute remap, issues)"
+                  onClick={() => vscode?.postMessage({ type: 'requestHydrateFlow', flowName: flow.name })}
+                >
+                  🔍 Hydrate
+                </button>
               </div>
-              <div className="chevron" aria-hidden>
-                {isOpen ? '▾' : '▸'}
-              </div>
-            </button>
+            </div>
             {isOpen && (
               <div className="flow-body">
                 <FlowDiagram
                   flow={flow}
                   onNodeClick={(nodeName) => selectNode({ flowName: flow.name, nodeName })}
+                />
+                <IssuesPanel
+                  flow={flow}
+                  hydrated={hydrated.get(flow.name)}
+                  onOpenLocation={(filePath, line) =>
+                    vscode?.postMessage({ type: 'openLocation', filePath, lineNumber: line })
+                  }
+                  onAddComment={(annotationId, line) => {
+                    const ok = window.confirm(
+                      `Insert flow comment at line ${line} in ${flow.name}?`
+                    );
+                    if (ok) {
+                      vscode?.postMessage({
+                        type: 'addCandidateComment',
+                        flowName: flow.name,
+                        annotationId,
+                        line,
+                      });
+                    }
+                  }}
+                  onResolve={(annotationId, line) =>
+                    vscode?.postMessage({
+                      type: 'resolveCandidate',
+                      flowName: flow.name,
+                      annotationId,
+                      line,
+                    })
+                  }
                 />
               </div>
             )}
