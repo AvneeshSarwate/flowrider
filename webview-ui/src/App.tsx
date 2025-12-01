@@ -1,35 +1,98 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect } from 'react';
+import FlowList from './components/FlowList';
+import NodePopup from './components/NodePopup';
+import { useFlowStore } from './store';
+import type { ExtensionMessage } from './types';
+import vscode from './vscode';
+import './App.css';
+
+const toFilename = (filePath: string) => filePath.split(/[\\/]/).pop() ?? filePath;
 
 function App() {
-  const [count, setCount] = useState(0)
+  const flows = useFlowStore((state) => state.flows);
+  const malformed = useFlowStore((state) => state.malformed);
+  const selectedNode = useFlowStore((state) => state.selectedNode);
+  const setFlows = useFlowStore((state) => state.setFlows);
+  const clearSelection = useFlowStore((state) => state.clearSelection);
+
+  useEffect(() => {
+    const handler = (event: MessageEvent<ExtensionMessage>) => {
+      const message = event.data;
+      if (message?.type === 'flowsUpdated') {
+        setFlows(message.flows, message.malformed ?? []);
+      }
+    };
+
+    window.addEventListener('message', handler);
+    vscode?.postMessage({ type: 'requestFlows' });
+
+    return () => {
+      window.removeEventListener('message', handler);
+    };
+  }, [setFlows]);
+
+  const handleOpenLocation = (filePath: string, lineNumber: number) => {
+    vscode?.postMessage({ type: 'openLocation', filePath, lineNumber });
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <div className="app">
+      <header className="topbar">
+        <div className="title-block">
+          <div className="title">Flow Rider</div>
+          <div className="subtitle">Flow comments → Mermaid DAGs</div>
+        </div>
+        <button
+          className="ghost-button"
+          title="Request latest flows"
+          onClick={() => vscode?.postMessage({ type: 'requestFlows' })}
+        >
+          ↻
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      </header>
+
+      {flows.length === 0 && malformed.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-title">No flow comments found</div>
+          <div className="empty-body">
+            Add comments like <code>#@#@#@ auth-flow : validate =&gt; authorize</code> and hit
+            save to see them here.
+          </div>
+        </div>
+      ) : (
+        <FlowList flows={flows} />
+      )}
+
+      {malformed.length > 0 && (
+        <div className="panel">
+          <div className="panel-head">
+            <span>Parsing errors ({malformed.length})</span>
+          </div>
+          <div className="malformed-list">
+            {malformed.map((item) => (
+              <button
+                key={`${item.filePath}:${item.lineNumber}:${item.rawText}`}
+                className="malformed-item"
+                onClick={() => handleOpenLocation(item.filePath, item.lineNumber)}
+              >
+                <span className="path">
+                  {toFilename(item.filePath)}:{item.lineNumber}
+                </span>
+                <span className="reason">{item.reason}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <NodePopup
+        flows={flows}
+        selection={selectedNode}
+        onClose={clearSelection}
+        onOpenLocation={handleOpenLocation}
+      />
+    </div>
+  );
 }
 
-export default App
+export default App;

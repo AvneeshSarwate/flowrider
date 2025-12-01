@@ -1,26 +1,66 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { FlowViewProvider } from './FlowViewProvider';
+import { getDebounceMs, getFlowTag } from './config';
+import { FlowStore } from './flowStore';
+import { parseWorkspace } from './flowParser';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+  const store = new FlowStore();
+  const viewProvider = new FlowViewProvider(context);
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "flowrider" is now active!');
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(FlowViewProvider.viewId, viewProvider)
+  );
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('flowrider.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from flowRider!');
-	});
+  let debounceHandle: NodeJS.Timeout | undefined;
+  let lastScanError: string | undefined;
 
-	context.subscriptions.push(disposable);
+  const runScan = async () => {
+    const tag = getFlowTag();
+    try {
+      const result = await parseWorkspace(tag);
+      store.set(result);
+      viewProvider.update(result.flows, result.malformed);
+      lastScanError = undefined;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error while scanning flows';
+      console.error('[FlowRider] scan failed', error);
+      if (message !== lastScanError) {
+        vscode.window.showErrorMessage(
+          `FlowRider failed to scan for flow comments: ${message}`
+        );
+        lastScanError = message;
+      }
+    }
+  };
+
+  const scheduleScan = () => {
+    const debounceMs = getDebounceMs();
+    if (debounceHandle) {
+      clearTimeout(debounceHandle);
+    }
+    debounceHandle = setTimeout(() => {
+      runScan();
+    }, debounceMs);
+  };
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(() => {
+      scheduleScan();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('flowrider.refreshFlows', async () => {
+      await runScan();
+      vscode.window.showInformationMessage('Flow Rider flows refreshed.');
+    })
+  );
+
+  await runScan();
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  // no-op
+}

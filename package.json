@@ -9,13 +9,42 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:flowrider.flowsView",
+    "onCommand:flowrider.refreshFlows"
+  ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "FlowRider",
+      "properties": {
+        "flowrider.tag": {
+          "type": "string",
+          "default": "#@#@#@",
+          "description": "Tag used to identify flow comments"
+        },
+        "flowrider.debounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 0,
+          "description": "Delay (ms) to debounce workspace rescans after saves"
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "flowrider.flowsView",
+          "name": "Flow Rider"
+        }
+      ]
+    },
     "commands": [
       {
-        "command": "flowrider.helloWorld",
-        "title": "Hello World"
+        "command": "flowrider.refreshFlows",
+        "title": "FlowRider: Refresh Flows"
       }
     ]
   },

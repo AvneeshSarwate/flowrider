@@ -6,6 +6,7 @@ export default defineConfig({
   base: '', // important – no leading slash
   build: {
     outDir: '../media',
-    emptyOutDir: true
+    emptyOutDir: true,
+    manifest: true
   }
 })
