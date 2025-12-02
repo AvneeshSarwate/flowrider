@@ -9,7 +9,12 @@ interface Props {
   onResolve: (annotationId: string, line: number) => void;
 }
 
-const Collapse: React.FC<{ title: string }> = ({ title, children }) => {
+interface CollapseProps {
+  title: string;
+  children?: React.ReactNode;
+}
+
+const Collapse: React.FC<CollapseProps> = ({ title, children }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="collapse">
@@ -22,12 +27,15 @@ const Collapse: React.FC<{ title: string }> = ({ title, children }) => {
 };
 
 function renderMoreInfo(annotation: HydratedAnnotation) {
+  const { contextBefore, contextLine, contextAfter, commitHash } = annotation.annotation;
+  const contextLines = [...(contextBefore || []), contextLine, ...(contextAfter || [])].filter(Boolean);
+  
   return (
     <Collapse title="More info">
-      <div className="mono">commit: {annotation.annotation.commitHash}</div>
-      <pre className="context-block">
-        {[...annotation.annotation.contextBefore, annotation.annotation.contextLine, ...annotation.annotation.contextAfter].join('\n')}
-      </pre>
+      <div className="mono">commit: {commitHash?.slice(0, 12) || 'unknown'}</div>
+      {contextLines.length > 0 && (
+        <pre className="context-block">{contextLines.join('\n')}</pre>
+      )}
     </Collapse>
   );
 }
@@ -117,7 +125,7 @@ function DeletedList({ items }: { items: HydratedAnnotation[] }) {
               {ann.annotation.currentNode} → {ann.annotation.nextNode}
             </div>
             <div className="issue-sub">{ann.annotation.filePath}</div>
-            <pre className="context-block">{ann.annotation.rawComment}</pre>
+            <pre className="context-block">{ann.annotation.contextLine || ann.annotation.rawComment}</pre>
             {renderMoreInfo(ann)}
           </div>
         ))}
@@ -127,7 +135,6 @@ function DeletedList({ items }: { items: HydratedAnnotation[] }) {
 }
 
 const IssuesPanel: React.FC<Props> = ({
-  flow,
   hydrated,
   onOpenLocation,
   onAddComment,

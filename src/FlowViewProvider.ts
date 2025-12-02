@@ -17,7 +17,11 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   private get isDev(): boolean {
-    return this.context.extensionMode === vscode.ExtensionMode.Development;
+    // Only use dev server when explicitly enabled to avoid broken webview in normal debug runs.
+    return (
+      this.context.extensionMode === vscode.ExtensionMode.Development &&
+      process.env.FLOWRIDER_DEV_SERVER === 'true'
+    );
   }
 
   resolveWebviewView(webviewView: vscode.WebviewView): void {
@@ -143,8 +147,8 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
       img-src data: ${DEV_SERVER_URL};
       style-src 'unsafe-inline' ${DEV_SERVER_URL};
       font-src data:;
-      script-src 'unsafe-inline' ${DEV_SERVER_URL};
-      connect-src ${DEV_SERVER_URL} ws://localhost:${DEV_SERVER_PORT};
+      script-src 'unsafe-inline' ${DEV_SERVER_URL} http://localhost:8097;
+      connect-src ${DEV_SERVER_URL} ws://localhost:${DEV_SERVER_PORT} http://localhost:8097 ws://localhost:8097;
     `;
 
     const reactRefresh = `

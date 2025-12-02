@@ -53,13 +53,16 @@
   color: var(--vscode-foreground);
   border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
   border-radius: 6px;
-  width: 32px;
-  height: 28px;
+  padding: 4px 8px;
+  min-height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .ghost-button:hover {
@@ -89,7 +92,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.flow-header-main {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
+  padding: 0;
+  min-width: 0;
+}
+
+.flow-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .flow-meta {
@@ -101,6 +123,44 @@
 .flow-name {
   font-size: 13px;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge.status-loaded {
+  background: color-mix(in srgb, var(--vscode-charts-green) 25%, transparent);
+  color: var(--vscode-charts-green);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-green) 40%, transparent);
+}
+
+.badge.status-partial {
+  background: color-mix(in srgb, var(--vscode-charts-yellow) 25%, transparent);
+  color: var(--vscode-charts-yellow);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-yellow) 40%, transparent);
+}
+
+.badge.status-empty {
+  background: color-mix(in srgb, var(--vscode-charts-red) 25%, transparent);
+  color: var(--vscode-charts-red);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-red) 40%, transparent);
+}
+
+.badge.badge-cross {
+  background: color-mix(in srgb, var(--vscode-charts-blue) 25%, transparent);
+  color: var(--vscode-charts-blue);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-blue) 40%, transparent);
 }
 
 .flow-subtitle {
@@ -110,6 +170,8 @@
 
 .chevron {
   font-size: 14px;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .flow-body {
@@ -119,9 +181,14 @@
 .diagram {
   border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.06));
   border-radius: 6px;
-  background: color-mix(in srgb, var(--vscode-editor-background) 85%, #000 15%);
-  padding: 10px;
+  background: #1e1e1e;
+  padding: 16px;
   overflow: auto;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
 }
 
 .diagram-error {
@@ -133,6 +200,7 @@
   border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.07));
   border-radius: 8px;
   background: color-mix(in srgb, var(--vscode-sideBar-background) 90%, #000 10%);
+  overflow: hidden;
 }
 
 .panel-head {
@@ -140,6 +208,13 @@
   font-weight: 600;
   font-size: 12px;
   border-bottom: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.06));
+}
+
+.panel-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .malformed-list {
@@ -189,6 +264,113 @@
   font-weight: 700;
   margin-bottom: 6px;
   color: var(--vscode-foreground);
+}
+
+.issues-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.issue-card {
+  border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 90%, #000 10%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.issue-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+}
+
+.issue-sub {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.candidate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.candidate-row {
+  border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.candidate-meta {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.candidate-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.context-block {
+  background: var(--vscode-textCodeBlock-background, rgba(0, 0, 0, 0.3));
+  border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 0;
+  font-family: var(--vscode-editor-font-family, ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+  color: var(--vscode-editor-foreground, #ccc);
+}
+
+.collapse {
+  border-top: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+  padding-top: 6px;
+}
+
+.collapse-toggle {
+  background: color-mix(in srgb, var(--vscode-foreground) 6%, transparent);
+  border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.collapse-body {
+  margin-top: 6px;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  word-break: break-all;
+}
+
+.panel.success {
+  border-color: color-mix(in srgb, var(--vscode-charts-green) 60%, transparent);
+}
+
+.panel.info {
+  border-color: color-mix(in srgb, var(--vscode-charts-blue) 60%, transparent);
+}
+
+.ghost-button.danger {
+  border-color: color-mix(in srgb, var(--vscode-errorForeground) 50%, transparent);
+  color: var(--vscode-errorForeground);
 }
 
 .popup-backdrop {

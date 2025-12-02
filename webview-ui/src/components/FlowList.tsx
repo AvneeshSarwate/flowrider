@@ -2,7 +2,6 @@ import type { FlowSummary } from '../types';
 import { useFlowStore } from '../store';
 import FlowDiagram from './FlowDiagram';
 import vscode from '../vscode';
-import { useFlowStore } from '../store';
 import IssuesPanel from './IssuesPanel';
 
 interface Props {

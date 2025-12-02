@@ -77,7 +77,22 @@ const FlowDiagram: React.FC<Props> = ({ flow, onNodeClick }) => {
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'loose',
-      theme: 'neutral',
+      theme: 'dark',
+      themeVariables: {
+        primaryColor: '#3c3c3c',
+        primaryTextColor: '#cccccc',
+        primaryBorderColor: '#555555',
+        lineColor: '#888888',
+        secondaryColor: '#2d2d2d',
+        tertiaryColor: '#252525',
+        background: '#1e1e1e',
+        mainBkg: '#2d2d2d',
+        nodeBorder: '#555555',
+        clusterBkg: '#252525',
+        clusterBorder: '#444444',
+        titleColor: '#cccccc',
+        edgeLabelBackground: '#1e1e1e',
+      },
     });
 
     const render = async () => {
