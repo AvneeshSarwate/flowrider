@@ -1,22 +1,37 @@
-import { FlowRecord, FlowSummary, ParsedComment } from './types';
+import { DuplicateEdge, FlowRecord, FlowSummary, MovedEdge, ParsedComment } from './types';
 
-function isSameAnnotation(annotation: FlowRecord['annotations'][number], comment: ParsedComment): boolean {
-  if (annotation.flowName !== comment.flowName) return false;
-  if (annotation.filePath !== comment.relativePath) return false;
-  if (annotation.currentNode !== comment.currentNode) return false;
-  if (annotation.nextNode !== comment.nextNode) return false;
+/** Edge identity key: flowName|currentNode|nextNode */
+function edgeKey(flowName: string, currentNode: string, nextNode: string): string {
+  return `${flowName}|${currentNode}|${nextNode}`;
+}
 
-  if (annotation.isoLine === comment.isoLine) return true;
+/** Detect duplicate edges within a flow's comments */
+function detectDuplicates(comments: ParsedComment[]): DuplicateEdge[] {
+  const byKey = new Map<string, ParsedComment[]>();
 
-  // Fallbacks: close physical line + matching context
-  if (Math.abs(annotation.line - comment.line) <= 1) {
-    const ctxA = annotation.contextLine.trim();
-    const ctxB = comment.contextLine.trim();
-    if (ctxA && ctxA === ctxB) {
-      return true;
+  for (const comment of comments) {
+    const key = edgeKey(comment.flowName, comment.currentNode, comment.nextNode);
+    const list = byKey.get(key) ?? [];
+    list.push(comment);
+    byKey.set(key, list);
+  }
+
+  const duplicates: DuplicateEdge[] = [];
+
+  for (const [, group] of byKey) {
+    if (group.length > 1) {
+      duplicates.push({
+        currentNode: group[0].currentNode,
+        nextNode: group[0].nextNode,
+        locations: group.map((c) => ({
+          filePath: c.filePath,
+          lineNumber: c.line,
+        })),
+      });
     }
   }
-  return false;
+
+  return duplicates;
 }
 
 export function computeFlowSummaries(
@@ -39,29 +54,78 @@ export function computeFlowSummaries(
   for (const flowName of allFlowNames) {
     const dbFlow = flows.find((f) => f.name === flowName);
     const comments = parsedByFlow.get(flowName) ?? [];
-    const used = new Set<number>();
+
+    // Detect duplicates first
+    const duplicates = detectDuplicates(comments);
+
+    // For matching, only consider non-duplicate comments (use first occurrence)
+    const seenKeys = new Set<string>();
+    const uniqueComments: ParsedComment[] = [];
+    for (const comment of comments) {
+      const key = edgeKey(comment.flowName, comment.currentNode, comment.nextNode);
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        uniqueComments.push(comment);
+      }
+    }
+
+    // Match DB annotations against unique source comments and detect moved edges
     let present = 0;
+    const matchedCommentKeys = new Set<string>();
+    const moved: MovedEdge[] = [];
+
+    // Build a map of unique comments by edge key for quick lookup
+    const uniqueCommentsByKey = new Map<string, ParsedComment>();
+    for (const comment of uniqueComments) {
+      const key = edgeKey(comment.flowName, comment.currentNode, comment.nextNode);
+      uniqueCommentsByKey.set(key, comment);
+    }
 
     if (dbFlow) {
       for (const annotation of dbFlow.annotations) {
-        const idx = comments.findIndex((c, i) => !used.has(i) && isSameAnnotation(annotation, c));
-        if (idx >= 0) {
-          used.add(idx);
+        const key = edgeKey(annotation.flowName, annotation.currentNode, annotation.nextNode);
+        const matchingComment = uniqueCommentsByKey.get(key);
+        if (matchingComment) {
           present += 1;
+          matchedCommentKeys.add(key);
+
+          // Check if location differs (file or line)
+          const dbFile = annotation.filePath;
+          const dbLine = annotation.line;
+          const srcFile = matchingComment.relativePath;
+          const srcLine = matchingComment.line;
+
+          if (dbFile !== srcFile || dbLine !== srcLine) {
+            moved.push({
+              currentNode: annotation.currentNode,
+              nextNode: annotation.nextNode,
+              dbLocation: { filePath: dbFile, lineNumber: dbLine },
+              sourceLocation: { filePath: srcFile, lineNumber: srcLine },
+            });
+          }
         }
       }
     }
 
-    const extras = comments.length - used.size;
+    // Extras = unique source edges not in DB
+    const extras = uniqueComments.filter((c) => {
+      const key = edgeKey(c.flowName, c.currentNode, c.nextNode);
+      return !matchedCommentKeys.has(key) || !dbFlow;
+    }).length;
+
     const total = dbFlow ? dbFlow.annotations.length : 0;
     const dirty = dbFlow ? present !== total || extras > 0 : true;
-    let status: 'loaded' | 'partial' | 'notLoaded' = 'notLoaded';
-    if (comments.length === 0 && total === 0) {
+
+    // Determine status with priority: duplicates > moved > partial > loaded > notLoaded
+    let status: 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved' = 'notLoaded';
+    if (duplicates.length > 0) {
+      status = 'duplicates';
+    } else if (moved.length > 0) {
+      status = 'moved';
+    } else if (comments.length === 0 && total === 0) {
       status = 'notLoaded';
     } else if (!dirty) {
       status = 'loaded';
-    } else if (present > 0) {
-      status = 'partial';
     } else {
       status = 'partial';
     }
@@ -111,6 +175,8 @@ export function computeFlowSummaries(
       declaredCross,
       isCross,
       dirty,
+      duplicates,
+      moved,
     });
   }
 

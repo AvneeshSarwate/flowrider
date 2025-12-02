@@ -158,6 +158,18 @@
   border: 1px solid color-mix(in srgb, var(--vscode-charts-red) 40%, transparent);
 }
 
+.badge.status-duplicates {
+  background: color-mix(in srgb, var(--vscode-charts-orange) 25%, transparent);
+  color: var(--vscode-charts-orange, #ffb454);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-orange) 40%, transparent);
+}
+
+.badge.status-moved {
+  background: color-mix(in srgb, var(--vscode-charts-blue) 25%, transparent);
+  color: var(--vscode-charts-blue);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-blue) 40%, transparent);
+}
+
 .badge.badge-cross {
   background: color-mix(in srgb, var(--vscode-charts-blue) 25%, transparent);
   color: var(--vscode-charts-blue);
@@ -373,6 +385,52 @@
 
 .panel.info {
   border-color: color-mix(in srgb, var(--vscode-charts-blue) 60%, transparent);
+}
+
+.panel.warning {
+  border-color: color-mix(in srgb, var(--vscode-charts-orange) 60%, transparent);
+}
+
+.moved-edges-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.moved-edge-item {
+  border: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.moved-edge-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+}
+
+.moved-edge-toggle:hover {
+  background: color-mix(in srgb, var(--vscode-foreground) 6%, transparent);
+}
+
+.moved-edge-label {
+  font-weight: 600;
+}
+
+.moved-edge-details {
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-input-border, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .ghost-button.danger {

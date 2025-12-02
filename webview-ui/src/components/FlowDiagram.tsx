@@ -17,6 +17,40 @@ const sanitizeId = (value: string) => {
 
 const escapeLabel = (value: string) => value.replace(/"/g, '&quot;');
 
+const buildMermaidDefinition = (
+  flow: FlowSummary,
+  callbackName: string
+): { definition: string; idToNode: Map<string, string> } => {
+  const idMap = new Map<string, string>();
+  const lines: string[] = ['graph TD'];
+  const clickLines: string[] = [];
+
+  for (const node of flow.nodes) {
+    const id = sanitizeId(node);
+    idMap.set(id, node);
+    lines.push(`  ${id}["${escapeLabel(node)}"]`);
+    clickLines.push(`  click ${id} ${callbackName}`);
+  }
+
+  for (const edge of flow.edges) {
+    const fromId = sanitizeId(edge.currentPos);
+    const toId = sanitizeId(edge.nextPos);
+    if (!idMap.has(fromId)) {
+      idMap.set(fromId, edge.currentPos);
+      lines.push(`  ${fromId}["${escapeLabel(edge.currentPos)}"]`);
+      clickLines.push(`  click ${fromId} ${callbackName}`);
+    }
+    if (!idMap.has(toId)) {
+      idMap.set(toId, edge.nextPos);
+      lines.push(`  ${toId}["${escapeLabel(edge.nextPos)}"]`);
+      clickLines.push(`  click ${toId} ${callbackName}`);
+    }
+    lines.push(`  ${fromId} --> ${toId}`);
+  }
+
+  return { definition: [...lines, ...clickLines].join('\n'), idToNode: idMap };
+};
+
 interface Props {
   flow: FlowSummary;
   onNodeClick: (nodeName: string) => void;
@@ -27,36 +61,10 @@ const FlowDiagram: React.FC<Props> = ({ flow, onNodeClick }) => {
   const chartId = useId().replace(/:/g, '');
   const callbackName = `flowrider_${chartId}`;
 
-  const { definition, idToNode } = useMemo(() => {
-    const idMap = new Map<string, string>();
-    const lines: string[] = ['graph TD'];
-    const clickLines: string[] = [];
-
-    for (const node of flow.nodes) {
-      const id = sanitizeId(node);
-      idMap.set(id, node);
-      lines.push(`  ${id}["${escapeLabel(node)}"]`);
-      clickLines.push(`  click ${id} ${callbackName}`);
-    }
-
-    for (const edge of flow.edges) {
-      const fromId = sanitizeId(edge.currentPos);
-      const toId = sanitizeId(edge.nextPos);
-      if (!idMap.has(fromId)) {
-        idMap.set(fromId, edge.currentPos);
-        lines.push(`  ${fromId}["${escapeLabel(edge.currentPos)}"]`);
-        clickLines.push(`  click ${fromId} ${callbackName}`);
-      }
-      if (!idMap.has(toId)) {
-        idMap.set(toId, edge.nextPos);
-        lines.push(`  ${toId}["${escapeLabel(edge.nextPos)}"]`);
-        clickLines.push(`  click ${toId} ${callbackName}`);
-      }
-      lines.push(`  ${fromId} --> ${toId}`);
-    }
-
-    return { definition: [...lines, ...clickLines].join('\n'), idToNode: idMap };
-  }, [flow.edges, flow.nodes, callbackName]);
+  const { definition, idToNode } = useMemo(
+    () => buildMermaidDefinition(flow, callbackName),
+    [flow, callbackName]
+  );
 
   useEffect(() => {
     if (!containerRef.current) {

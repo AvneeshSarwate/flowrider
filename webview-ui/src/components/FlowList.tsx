@@ -3,6 +3,8 @@ import { useFlowStore } from '../store';
 import FlowDiagram from './FlowDiagram';
 import vscode from '../vscode';
 import IssuesPanel from './IssuesPanel';
+import DuplicatesPanel from './DuplicatesPanel';
+import MovedNodesPanel from './MovedNodesPanel';
 
 interface Props {
   flows: FlowSummary[];
@@ -73,6 +75,18 @@ const FlowList: React.FC<Props> = ({ flows }) => {
                 <FlowDiagram
                   flow={flow}
                   onNodeClick={(nodeName) => selectNode({ flowName: flow.name, nodeName })}
+                />
+                <DuplicatesPanel
+                  duplicates={flow.duplicates}
+                  onOpenLocation={(filePath, line) =>
+                    vscode?.postMessage({ type: 'openLocation', filePath, lineNumber: line })
+                  }
+                />
+                <MovedNodesPanel
+                  moved={flow.moved}
+                  onOpenLocation={(filePath, line) =>
+                    vscode?.postMessage({ type: 'openLocation', filePath, lineNumber: line })
+                  }
                 />
                 <IssuesPanel
                   flow={flow}

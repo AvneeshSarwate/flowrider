@@ -12,7 +12,20 @@ export interface FlowGraph {
   nodes: string[];
 }
 
-export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded';
+export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved';
+
+export interface DuplicateEdge {
+  currentNode: string;
+  nextNode: string;
+  locations: Array<{ filePath: string; lineNumber: number }>;
+}
+
+export interface MovedEdge {
+  currentNode: string;
+  nextNode: string;
+  dbLocation: { filePath: string; lineNumber: number };
+  sourceLocation: { filePath: string; lineNumber: number };
+}
 
 export interface FlowSummary extends FlowGraph {
   id: string;
@@ -23,6 +36,8 @@ export interface FlowSummary extends FlowGraph {
   declaredCross: boolean;
   isCross: boolean;
   dirty: boolean;
+  duplicates: DuplicateEdge[];
+  moved: MovedEdge[];
 }
 
 export interface MalformedComment {
