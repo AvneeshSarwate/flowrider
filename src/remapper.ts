@@ -336,4 +336,39 @@ export class RemapEngine {
 
     return { flow, annotations: results };
   }
+
+  /**
+   * Find candidate positions for a missing edge using snippet-based search.
+   * Unlike full remapping, this doesn't require git history - just searches
+   * for the context in the current file.
+   */
+  async findCandidatesForMissingEdge(
+    filePath: string,
+    contextBefore: string[],
+    contextLine: string,
+    contextAfter: string[],
+    symbolPath?: string | null
+  ): Promise<MatchCandidate[]> {
+    const absPath = path.join(this.workspacePath, filePath);
+    let newContent: string | undefined;
+    try {
+      newContent = await fs.promises.readFile(absPath, 'utf8');
+    } catch {
+      return [];
+    }
+
+    const newLines = newContent.split(/\r?\n/);
+    const symbolIndex = buildSymbolIndex(absPath, newContent);
+    const region = regionFor(newLines, symbolPath, symbolIndex);
+
+    const snippet = buildSnippet(contextBefore, contextLine, contextAfter);
+    const snippetLines = snippet.split(/\r?\n/);
+
+    const candidates: MatchCandidate[] = [];
+    candidates.push(...exactSnippetSearch(snippetLines, region));
+    candidates.push(...contextLineSearch(contextLine, snippet, snippetLines, region));
+    candidates.push(...fuzzyWindowSearch(snippet, snippetLines, region));
+
+    return dedupeCandidates(candidates).slice(0, MAX_CANDIDATES);
+  }
 }

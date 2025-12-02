@@ -11,7 +11,8 @@ const toFilename = (filePath: string) => filePath.split(/[\\/]/).pop() ?? filePa
 function App() {
   const flows = useFlowStore((state) => state.flows);
   const malformed = useFlowStore((state) => state.malformed);
-  const setHydrated = useFlowStore((state) => state.setHydrated);
+  const setMissingCandidates = useFlowStore((state) => state.setMissingCandidates);
+  const setMovedCandidates = useFlowStore((state) => state.setMovedCandidates);
   const selectedNode = useFlowStore((state) => state.selectedNode);
   const setFlows = useFlowStore((state) => state.setFlows);
   const clearSelection = useFlowStore((state) => state.clearSelection);
@@ -23,9 +24,13 @@ function App() {
         console.log('webview flowsUpdated', message.flows.length);
         setFlows(message.flows, message.malformed ?? []);
       }
-      if (message?.type === 'hydratedFlow') {
-        console.log('webview hydratedFlow', message.flowName, message.hydrated.annotations.length);
-        setHydrated(message.flowName, message.hydrated);
+      if (message?.type === 'missingEdgeCandidates') {
+        console.log('webview missingEdgeCandidates', message.data.flowName, message.data.candidates.length);
+        setMissingCandidates(message.data);
+      }
+      if (message?.type === 'movedEdgeCandidates') {
+        console.log('webview movedEdgeCandidates', message.data.flowName, message.data.candidates.length);
+        setMovedCandidates(message.data);
       }
     };
 
@@ -35,7 +40,7 @@ function App() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [setFlows]);
+  }, [setFlows, setMissingCandidates, setMovedCandidates]);
 
   const handleOpenLocation = (filePath: string, lineNumber: number) => {
     console.log('handleOpenLocation', filePath, lineNumber);

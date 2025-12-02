@@ -150,7 +150,7 @@ export interface SymbolIndex {
   byPath: Map<string, SymbolRange>;
 }
 
-export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved';
+export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved' | 'missing';
 
 export interface DuplicateEdge {
   currentNode: string;
@@ -161,8 +161,27 @@ export interface DuplicateEdge {
 export interface MovedEdge {
   currentNode: string;
   nextNode: string;
-  dbLocation: { filePath: string; lineNumber: number };
+  dbLocation: {
+    filePath: string;
+    lineNumber: number;
+    contextBefore: string[];
+    contextLine: string;
+    contextAfter: string[];
+  };
   sourceLocation: { filePath: string; lineNumber: number };
+}
+
+export interface MissingEdge {
+  currentNode: string;
+  nextNode: string;
+  dbLocation: {
+    filePath: string;
+    lineNumber: number;
+    contextBefore: string[];
+    contextLine: string;
+    contextAfter: string[];
+  };
+  rawComment: string;
 }
 
 export interface FlowSummary extends FlowGraph {
@@ -176,6 +195,19 @@ export interface FlowSummary extends FlowGraph {
   dirty: boolean; // code differs from DB
   duplicates: DuplicateEdge[];
   moved: MovedEdge[];
+  missing: MissingEdge[];
+}
+
+export interface MissingEdgeCandidates {
+  flowName: string;
+  edgeKey: string; // currentNode|nextNode
+  candidates: MatchCandidate[];
+}
+
+export interface MovedEdgeCandidates {
+  flowName: string;
+  edgeKey: string; // currentNode|nextNode
+  candidates: MatchCandidate[];
 }
 
 export type ExtensionMessage =
@@ -185,16 +217,19 @@ export type ExtensionMessage =
       malformed: MalformedComment[];
     }
   | {
-      type: 'hydratedFlow';
-      flowName: string;
-      hydrated: HydratedFlow;
+      type: 'missingEdgeCandidates';
+      data: MissingEdgeCandidates;
+    }
+  | {
+      type: 'movedEdgeCandidates';
+      data: MovedEdgeCandidates;
     };
 
 export type WebviewMessage =
   | { type: 'openLocation'; filePath: string; lineNumber: number }
   | { type: 'requestFlows' }
   | { type: 'writeFlowToDb'; flowName: string }
-  | { type: 'hydrateFlowFromDb'; flowName: string }
-  | { type: 'requestHydrateFlow'; flowName: string }
-  | { type: 'resolveCandidate'; flowName: string; annotationId: string; line: number }
-  | { type: 'addCandidateComment'; flowName: string; annotationId: string; line: number };
+  | { type: 'findMissingEdgeCandidates'; flowName: string; edge: MissingEdge }
+  | { type: 'insertMissingComment'; flowName: string; edge: MissingEdge }
+  | { type: 'insertAtCandidate'; flowName: string; edge: MissingEdge; line: number }
+  | { type: 'findMovedEdgeCandidates'; flowName: string; edge: MovedEdge };

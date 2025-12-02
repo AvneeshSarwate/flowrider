@@ -52,33 +52,20 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand('flowrider.writeFlowToDb', message.flowName);
       }
 
-      if (message.type === 'hydrateFlowFromDb') {
-        await vscode.commands.executeCommand('flowrider.hydrateFlowByName', message.flowName);
+      if (message.type === 'findMissingEdgeCandidates') {
+        await vscode.commands.executeCommand('flowrider.findMissingEdgeCandidates', message.flowName, message.edge);
       }
 
-      if (message.type === 'requestHydrateFlow') {
-        await vscode.commands.executeCommand('flowrider.previewHydrateFlow', message.flowName);
+      if (message.type === 'insertMissingComment') {
+        await vscode.commands.executeCommand('flowrider.insertMissingComment', message.flowName, message.edge);
       }
 
-      if (message.type === 'resolveCandidate') {
-        const choice = await vscode.window.showWarningMessage(
-          'Mark this candidate as resolved?',
-          { modal: true },
-          'Resolve',
-          'Cancel'
-        );
-        if (choice === 'Resolve') {
-          await vscode.commands.executeCommand(
-            'flowrider.resolveCandidate',
-            message.flowName,
-            message.annotationId,
-            message.line
-          );
-        }
+      if (message.type === 'insertAtCandidate') {
+        await vscode.commands.executeCommand('flowrider.insertAtCandidate', message.flowName, message.edge, message.line);
       }
 
-      if (message.type === 'addCandidateComment') {
-        await vscode.commands.executeCommand('flowrider.addCandidateComment', message.flowName, message.annotationId, message.line);
+      if (message.type === 'findMovedEdgeCandidates') {
+        await vscode.commands.executeCommand('flowrider.findMovedEdgeCandidates', message.flowName, message.edge);
       }
     });
 
@@ -105,12 +92,20 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
     this.view.webview.postMessage(payload);
   }
 
-  pushHydrated(flowName: string, hydrated: import('./types').HydratedFlow) {
+  pushMissingCandidates(data: import('./types').MissingEdgeCandidates) {
     if (!this.view) return;
     const payload: ExtensionMessage = {
-      type: 'hydratedFlow',
-      flowName,
-      hydrated,
+      type: 'missingEdgeCandidates',
+      data,
+    };
+    this.view.webview.postMessage(payload);
+  }
+
+  pushMovedCandidates(data: import('./types').MovedEdgeCandidates) {
+    if (!this.view) return;
+    const payload: ExtensionMessage = {
+      type: 'movedEdgeCandidates',
+      data,
     };
     this.view.webview.postMessage(payload);
   }

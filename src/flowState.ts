@@ -1,4 +1,4 @@
-import { DuplicateEdge, FlowRecord, FlowSummary, MovedEdge, ParsedComment } from './types';
+import { DuplicateEdge, FlowRecord, FlowSummary, MissingEdge, MovedEdge, ParsedComment } from './types';
 
 /** Edge identity key: flowName|currentNode|nextNode */
 function edgeKey(flowName: string, currentNode: string, nextNode: string): string {
@@ -69,10 +69,11 @@ export function computeFlowSummaries(
       }
     }
 
-    // Match DB annotations against unique source comments and detect moved edges
+    // Match DB annotations against unique source comments and detect moved/missing edges
     let present = 0;
     const matchedCommentKeys = new Set<string>();
     const moved: MovedEdge[] = [];
+    const missing: MissingEdge[] = [];
 
     // Build a map of unique comments by edge key for quick lookup
     const uniqueCommentsByKey = new Map<string, ParsedComment>();
@@ -99,10 +100,30 @@ export function computeFlowSummaries(
             moved.push({
               currentNode: annotation.currentNode,
               nextNode: annotation.nextNode,
-              dbLocation: { filePath: dbFile, lineNumber: dbLine },
+              dbLocation: {
+                filePath: dbFile,
+                lineNumber: dbLine,
+                contextBefore: annotation.contextBefore,
+                contextLine: annotation.contextLine,
+                contextAfter: annotation.contextAfter,
+              },
               sourceLocation: { filePath: srcFile, lineNumber: srcLine },
             });
           }
+        } else {
+          // DB annotation not found in source - it's missing
+          missing.push({
+            currentNode: annotation.currentNode,
+            nextNode: annotation.nextNode,
+            dbLocation: {
+              filePath: annotation.filePath,
+              lineNumber: annotation.line,
+              contextBefore: annotation.contextBefore,
+              contextLine: annotation.contextLine,
+              contextAfter: annotation.contextAfter,
+            },
+            rawComment: annotation.rawComment,
+          });
         }
       }
     }
@@ -116,10 +137,12 @@ export function computeFlowSummaries(
     const total = dbFlow ? dbFlow.annotations.length : 0;
     const dirty = dbFlow ? present !== total || extras > 0 : true;
 
-    // Determine status with priority: duplicates > moved > partial > loaded > notLoaded
-    let status: 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved' = 'notLoaded';
+    // Determine status with priority: duplicates > missing > moved > partial > loaded > notLoaded
+    let status: 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved' | 'missing' = 'notLoaded';
     if (duplicates.length > 0) {
       status = 'duplicates';
+    } else if (missing.length > 0) {
+      status = 'missing';
     } else if (moved.length > 0) {
       status = 'moved';
     } else if (comments.length === 0 && total === 0) {
@@ -177,6 +200,7 @@ export function computeFlowSummaries(
       dirty,
       duplicates,
       moved,
+      missing,
     });
   }
 

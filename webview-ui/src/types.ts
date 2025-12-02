@@ -12,7 +12,7 @@ export interface FlowGraph {
   nodes: string[];
 }
 
-export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved';
+export type FlowLoadStatus = 'loaded' | 'partial' | 'notLoaded' | 'duplicates' | 'moved' | 'missing';
 
 export interface DuplicateEdge {
   currentNode: string;
@@ -23,8 +23,27 @@ export interface DuplicateEdge {
 export interface MovedEdge {
   currentNode: string;
   nextNode: string;
-  dbLocation: { filePath: string; lineNumber: number };
+  dbLocation: {
+    filePath: string;
+    lineNumber: number;
+    contextBefore: string[];
+    contextLine: string;
+    contextAfter: string[];
+  };
   sourceLocation: { filePath: string; lineNumber: number };
+}
+
+export interface MissingEdge {
+  currentNode: string;
+  nextNode: string;
+  dbLocation: {
+    filePath: string;
+    lineNumber: number;
+    contextBefore: string[];
+    contextLine: string;
+    contextAfter: string[];
+  };
+  rawComment: string;
 }
 
 export interface FlowSummary extends FlowGraph {
@@ -38,6 +57,7 @@ export interface FlowSummary extends FlowGraph {
   dirty: boolean;
   duplicates: DuplicateEdge[];
   moved: MovedEdge[];
+  missing: MissingEdge[];
 }
 
 export interface MalformedComment {
@@ -47,33 +67,6 @@ export interface MalformedComment {
   reason: string;
 }
 
-export type ExtensionMessage =
-  | {
-      type: 'flowsUpdated';
-      flows: FlowSummary[];
-      malformed: MalformedComment[];
-    }
-  | {
-      type: 'hydratedFlow';
-      flowName: string;
-      hydrated: HydratedFlow;
-    };
-
-export type WebviewMessage =
-  | { type: 'openLocation'; filePath: string; lineNumber: number }
-  | { type: 'requestFlows' }
-  | { type: 'writeFlowToDb'; flowName: string }
-  | { type: 'hydrateFlowFromDb'; flowName: string }
-  | { type: 'requestHydrateFlow'; flowName: string }
-  | { type: 'resolveCandidate'; flowName: string; annotationId: string; line: number }
-  | { type: 'addCandidateComment'; flowName: string; annotationId: string; line: number };
-
-// Hydration payloads
-export type ResolutionStatus =
-  | { kind: 'auto'; line: number; confidence: number; source: string }
-  | { kind: 'candidates'; candidates: MatchCandidate[] }
-  | { kind: 'unmapped'; reason: string; note?: string };
-
 export interface MatchCandidate {
   line: number;
   score: number;
@@ -82,25 +75,39 @@ export interface MatchCandidate {
   symbol?: string;
 }
 
-export interface Annotation {
-  id: string;
-  filePath: string;
+export interface MissingEdgeCandidates {
   flowName: string;
-  currentNode: string;
-  nextNode: string;
-  rawComment: string;
-  contextBefore: string[];
-  contextLine: string;
-  contextAfter: string[];
-  commitHash: string;
+  edgeKey: string; // currentNode|nextNode
+  candidates: MatchCandidate[];
 }
 
-export interface HydratedAnnotation {
-  annotation: Annotation;
-  resolution: ResolutionStatus;
+export interface MovedEdgeCandidates {
+  flowName: string;
+  edgeKey: string; // currentNode|nextNode
+  candidates: MatchCandidate[];
 }
 
-export interface HydratedFlow {
-  flow: { id: string; name: string };
-  annotations: HydratedAnnotation[];
-}
+export type ExtensionMessage =
+  | {
+      type: 'flowsUpdated';
+      flows: FlowSummary[];
+      malformed: MalformedComment[];
+    }
+  | {
+      type: 'missingEdgeCandidates';
+      data: MissingEdgeCandidates;
+    }
+  | {
+      type: 'movedEdgeCandidates';
+      data: MovedEdgeCandidates;
+    };
+
+export type WebviewMessage =
+  | { type: 'openLocation'; filePath: string; lineNumber: number }
+  | { type: 'requestFlows' }
+  | { type: 'writeFlowToDb'; flowName: string }
+  | { type: 'findMissingEdgeCandidates'; flowName: string; edge: MissingEdge }
+  | { type: 'insertMissingComment'; flowName: string; edge: MissingEdge }
+  | { type: 'insertAtCandidate'; flowName: string; edge: MissingEdge; line: number }
+  | { type: 'findMovedEdgeCandidates'; flowName: string; edge: MovedEdge };
+

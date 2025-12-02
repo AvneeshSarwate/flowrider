@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { FlowSummary, HydratedFlow, MalformedComment } from './types';
+import type { FlowSummary, MalformedComment, MissingEdgeCandidates, MovedEdgeCandidates } from './types';
 
 export interface Selection {
   flowName: string;
@@ -8,12 +8,14 @@ export interface Selection {
 
 export interface FlowUIStore {
   flows: FlowSummary[];
-  hydrated: Map<string, HydratedFlow>;
+  missingCandidates: Map<string, MissingEdgeCandidates>; // key: flowName|currentNode|nextNode
+  movedCandidates: Map<string, MovedEdgeCandidates>; // key: flowName|currentNode|nextNode
   malformed: MalformedComment[];
   expandedFlows: Set<string>;
   selectedNode: Selection | null;
   setFlows: (flows: FlowSummary[], malformed: MalformedComment[]) => void;
-  setHydrated: (flowName: string, hydrated: HydratedFlow) => void;
+  setMissingCandidates: (data: MissingEdgeCandidates) => void;
+  setMovedCandidates: (data: MovedEdgeCandidates) => void;
   toggleFlow: (flowName: string) => void;
   selectNode: (selection: Selection) => void;
   clearSelection: () => void;
@@ -21,7 +23,8 @@ export interface FlowUIStore {
 
 export const useFlowStore = create<FlowUIStore>((set) => ({
   flows: [],
-  hydrated: new Map<string, HydratedFlow>(),
+  missingCandidates: new Map<string, MissingEdgeCandidates>(),
+  movedCandidates: new Map<string, MovedEdgeCandidates>(),
   malformed: [],
   expandedFlows: new Set<string>(),
   selectedNode: null,
@@ -36,16 +39,25 @@ export const useFlowStore = create<FlowUIStore>((set) => ({
 
       return {
         flows,
-        hydrated: new Map<string, HydratedFlow>(),
+        missingCandidates: new Map<string, MissingEdgeCandidates>(),
+        movedCandidates: new Map<string, MovedEdgeCandidates>(),
         malformed,
         expandedFlows: nextExpanded,
       };
     }),
-  setHydrated: (flowName, hydrated) =>
+  setMissingCandidates: (data) =>
     set((state) => {
-      const next = new Map(state.hydrated);
-      next.set(flowName, hydrated);
-      return { hydrated: next };
+      const key = `${data.flowName}|${data.edgeKey}`;
+      const next = new Map(state.missingCandidates);
+      next.set(key, data);
+      return { missingCandidates: next };
+    }),
+  setMovedCandidates: (data) =>
+    set((state) => {
+      const key = `${data.flowName}|${data.edgeKey}`;
+      const next = new Map(state.movedCandidates);
+      next.set(key, data);
+      return { movedCandidates: next };
     }),
   toggleFlow: (flowName: string) =>
     set((state) => {
