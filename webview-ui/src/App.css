@@ -151,6 +151,7 @@
   border: 1px solid color-mix(in srgb, var(--vscode-charts-yellow) 40%, transparent);
 }
 
+.badge.status-notLoaded,
 .badge.status-empty {
   background: color-mix(in srgb, var(--vscode-charts-red) 25%, transparent);
   color: var(--vscode-charts-red);
@@ -161,6 +162,12 @@
   background: color-mix(in srgb, var(--vscode-charts-blue) 25%, transparent);
   color: var(--vscode-charts-blue);
   border: 1px solid color-mix(in srgb, var(--vscode-charts-blue) 40%, transparent);
+}
+
+.badge.badge-dirty {
+  background: color-mix(in srgb, var(--vscode-charts-orange) 25%, transparent);
+  color: var(--vscode-charts-orange, #ffb454);
+  border: 1px solid color-mix(in srgb, var(--vscode-charts-orange) 40%, transparent);
 }
 
 .flow-subtitle {

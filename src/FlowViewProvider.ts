@@ -61,7 +61,20 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
       }
 
       if (message.type === 'resolveCandidate') {
-        await vscode.commands.executeCommand('flowrider.resolveCandidate', message.flowName, message.annotationId, message.line);
+        const choice = await vscode.window.showWarningMessage(
+          'Mark this candidate as resolved?',
+          { modal: true },
+          'Resolve',
+          'Cancel'
+        );
+        if (choice === 'Resolve') {
+          await vscode.commands.executeCommand(
+            'flowrider.resolveCandidate',
+            message.flowName,
+            message.annotationId,
+            message.line
+          );
+        }
       }
 
       if (message.type === 'addCandidateComment') {

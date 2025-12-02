@@ -160,6 +160,7 @@ export interface FlowSummary extends FlowGraph {
   extras: number;
   declaredCross: boolean;
   isCross: boolean;
+  dirty: boolean; // code differs from DB
 }
 
 export type ExtensionMessage =

@@ -20,9 +20,11 @@ function App() {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
       const message = event.data;
       if (message?.type === 'flowsUpdated') {
+        console.log('webview flowsUpdated', message.flows.length);
         setFlows(message.flows, message.malformed ?? []);
       }
       if (message?.type === 'hydratedFlow') {
+        console.log('webview hydratedFlow', message.flowName, message.hydrated.annotations.length);
         setHydrated(message.flowName, message.hydrated);
       }
     };

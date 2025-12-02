@@ -53,6 +53,20 @@ function CandidatesList({
 }) {
   if (items.length === 0) return null;
 
+  const [pendingAdd, setPendingAdd] = useState<Set<string>>(new Set());
+  const [pendingResolve, setPendingResolve] = useState<Set<string>>(new Set());
+
+  const togglePending = (
+    key: string,
+    setFn: React.Dispatch<React.SetStateAction<Set<string>>>
+  ) =>
+    setFn((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
     <div className="panel">
       <div className="panel-head">
@@ -78,26 +92,66 @@ function CandidatesList({
                     </div>
                     <div className="candidate-actions">
                       <button
+                        type="button"
                         className="ghost-button"
                         onClick={() => onOpenLocation(ann.annotation.filePath, c.line)}
                       >
                         Open
                       </button>
                       <button
+                        type="button"
                         className="ghost-button"
-                        onClick={() => onAddComment(ann.annotation.id, c.line)}
-                      >
-                        Add comment
-                      </button>
-                      <button
-                        className="ghost-button danger"
                         onClick={() => {
-                          const ok = window.confirm('Mark this candidate as resolved?');
-                          if (ok) onResolve(ann.annotation.id, c.line);
+                          const key = `${ann.annotation.id}:${c.line}`;
+                          if (pendingAdd.has(key)) {
+                            onAddComment(ann.annotation.id, c.line);
+                            togglePending(key, setPendingAdd);
+                          } else {
+                            togglePending(key, setPendingAdd);
+                          }
                         }}
                       >
-                        Resolve
+                        {pendingAdd.has(`${ann.annotation.id}:${c.line}`) ? 'Confirm add' : 'Add comment'}
                       </button>
+                      {pendingAdd.has(`${ann.annotation.id}:${c.line}`) && (
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => {
+                            const key = `${ann.annotation.id}:${c.line}`;
+                            togglePending(key, setPendingAdd);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="ghost-button danger"
+                        onClick={() => {
+                          const key = `${ann.annotation.id}:${c.line}`;
+                          if (pendingResolve.has(key)) {
+                            onResolve(ann.annotation.id, c.line);
+                            togglePending(key, setPendingResolve);
+                          } else {
+                            togglePending(key, setPendingResolve);
+                          }
+                        }}
+                      >
+                        {pendingResolve.has(`${ann.annotation.id}:${c.line}`) ? 'Confirm resolve' : 'Resolve'}
+                      </button>
+                      {pendingResolve.has(`${ann.annotation.id}:${c.line}`) && (
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => {
+                            const key = `${ann.annotation.id}:${c.line}`;
+                            togglePending(key, setPendingResolve);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -125,7 +179,7 @@ function DeletedList({ items }: { items: HydratedAnnotation[] }) {
               {ann.annotation.currentNode} → {ann.annotation.nextNode}
             </div>
             <div className="issue-sub">{ann.annotation.filePath}</div>
-            <pre className="context-block">{ann.annotation.contextLine || ann.annotation.rawComment}</pre>
+        <pre className="context-block">{ann.annotation.contextLine || ann.annotation.rawComment}</pre>
             {renderMoreInfo(ann)}
           </div>
         ))}

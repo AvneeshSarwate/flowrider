@@ -23,60 +23,94 @@ export function computeFlowSummaries(
   flows: FlowRecord[],
   parsedComments: ParsedComment[]
 ): FlowSummary[] {
-  const byFlow = new Map<string, ParsedComment[]>();
+  const parsedByFlow = new Map<string, ParsedComment[]>();
   for (const comment of parsedComments) {
-    const list = byFlow.get(comment.flowName) ?? [];
+    const list = parsedByFlow.get(comment.flowName) ?? [];
     list.push(comment);
-    byFlow.set(comment.flowName, list);
+    parsedByFlow.set(comment.flowName, list);
   }
 
   const summaries: FlowSummary[] = [];
+  const allFlowNames = new Set<string>([
+    ...flows.map((f) => f.name),
+    ...parsedByFlow.keys(),
+  ]);
 
-  for (const flow of flows) {
-    const comments = byFlow.get(flow.name) ?? [];
+  for (const flowName of allFlowNames) {
+    const dbFlow = flows.find((f) => f.name === flowName);
+    const comments = parsedByFlow.get(flowName) ?? [];
     const used = new Set<number>();
     let present = 0;
 
-    for (const annotation of flow.annotations) {
-      const idx = comments.findIndex((c, i) => !used.has(i) && isSameAnnotation(annotation, c));
-      if (idx >= 0) {
-        used.add(idx);
-        present += 1;
+    if (dbFlow) {
+      for (const annotation of dbFlow.annotations) {
+        const idx = comments.findIndex((c, i) => !used.has(i) && isSameAnnotation(annotation, c));
+        if (idx >= 0) {
+          used.add(idx);
+          present += 1;
+        }
       }
     }
 
     const extras = comments.length - used.size;
+    const total = dbFlow ? dbFlow.annotations.length : 0;
+    const dirty = dbFlow ? present !== total || extras > 0 : true;
     let status: 'loaded' | 'partial' | 'notLoaded' = 'notLoaded';
-    if (present === flow.annotations.length && flow.annotations.length > 0) {
+    if (comments.length === 0 && total === 0) {
+      status = 'notLoaded';
+    } else if (!dirty) {
       status = 'loaded';
     } else if (present > 0) {
       status = 'partial';
+    } else {
+      status = 'partial';
     }
 
+    // Build graph from parsed comments if available; otherwise from DB.
     const nodes = new Set<string>();
-    const edges = flow.annotations.map((annotation) => {
-      nodes.add(annotation.currentNode);
-      nodes.add(annotation.nextNode);
-      return {
-        flowName: flow.name,
-        currentPos: annotation.currentNode,
-        nextPos: annotation.nextNode,
-        filePath: annotation.filePath,
-        lineNumber: annotation.line,
-      };
-    });
+    const edges =
+      comments.length > 0
+        ? comments.map((c) => {
+            nodes.add(c.currentNode);
+            nodes.add(c.nextNode);
+            return {
+              flowName,
+              currentPos: c.currentNode,
+              nextPos: c.nextNode,
+              filePath: c.filePath,
+              lineNumber: c.line,
+            };
+          })
+        : (dbFlow?.annotations ?? []).map((annotation) => {
+            nodes.add(annotation.currentNode);
+            nodes.add(annotation.nextNode);
+            return {
+              flowName,
+              currentPos: annotation.currentNode,
+              nextPos: annotation.nextNode,
+              filePath: annotation.filePath,
+              lineNumber: annotation.line,
+            };
+          });
+
+    const declaredCross =
+      comments.length > 0
+        ? comments.some((c) => c.crossDeclared) || dbFlow?.declaredCross === true
+        : dbFlow?.declaredCross ?? false;
+    const isCross = dbFlow?.isCross ?? declaredCross;
 
     summaries.push({
-      id: flow.id,
-      name: flow.name,
+      id: dbFlow?.id ?? `unsaved::${flowName}`,
+      name: flowName,
       edges: edges.sort((a, b) => a.lineNumber - b.lineNumber),
       nodes: Array.from(nodes).sort(),
       status,
       present,
-      total: flow.annotations.length,
+      total,
       extras: Math.max(0, extras),
-      declaredCross: flow.declaredCross,
-      isCross: flow.isCross,
+      declaredCross,
+      isCross,
+      dirty,
     });
   }
 

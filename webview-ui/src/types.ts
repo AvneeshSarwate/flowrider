@@ -22,6 +22,7 @@ export interface FlowSummary extends FlowGraph {
   extras: number;
   declaredCross: boolean;
   isCross: boolean;
+  dirty: boolean;
 }
 
 export interface MalformedComment {

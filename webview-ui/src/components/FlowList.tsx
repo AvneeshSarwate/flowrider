@@ -30,6 +30,7 @@ const FlowList: React.FC<Props> = ({ flows }) => {
                   <div className="flow-name">
                     {flow.name}
                     <span className={`badge status-${flow.status}`}>{flow.status}</span>
+                    {flow.dirty && <span className="badge badge-dirty">unsaved</span>}
                     {flow.declaredCross && <span className="badge badge-cross">cross</span>}
                   </div>
                   <div className="flow-subtitle">
@@ -80,26 +81,23 @@ const FlowList: React.FC<Props> = ({ flows }) => {
                     vscode?.postMessage({ type: 'openLocation', filePath, lineNumber: line })
                   }
                   onAddComment={(annotationId, line) => {
-                    const ok = window.confirm(
-                      `Insert flow comment at line ${line} in ${flow.name}?`
-                    );
-                    if (ok) {
-                      vscode?.postMessage({
-                        type: 'addCandidateComment',
-                        flowName: flow.name,
-                        annotationId,
-                        line,
-                      });
-                    }
+                    console.log('FlowList addCandidateComment', flow.name, annotationId, line);
+                    vscode?.postMessage({
+                      type: 'addCandidateComment',
+                      flowName: flow.name,
+                      annotationId,
+                      line,
+                    });
                   }}
-                  onResolve={(annotationId, line) =>
+                  onResolve={(annotationId, line) => {
+                    console.log('FlowList resolveCandidate', flow.name, annotationId, line);
                     vscode?.postMessage({
                       type: 'resolveCandidate',
                       flowName: flow.name,
                       annotationId,
                       line,
-                    })
-                  }
+                    });
+                  }}
                 />
               </div>
             )}

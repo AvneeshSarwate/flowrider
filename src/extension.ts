@@ -28,6 +28,26 @@ export async function activate(context: vscode.ExtensionContext) {
   let debounceHandle: NodeJS.Timeout | undefined;
   let lastScanError: string | undefined;
 
+  const runScan = async () => {
+    const tag = getFlowTag();
+    const contextLines = getContextLineCount();
+    try {
+      await store.load();
+      const scan = await import('./flowParser.js').then((m) => m.scanWorkspace(tag, contextLines));
+      const summaries = computeFlowSummaries(store.getAllFlows(), scan.parsed);
+      viewProvider.update(summaries, scan.malformed);
+      lastScanError = undefined;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error while scanning flows';
+      console.error('[FlowRider] scan failed', error);
+      if (message !== lastScanError) {
+        vscode.window.showErrorMessage(`FlowRider failed to scan: ${message}`);
+        lastScanError = message;
+      }
+    }
+  };
+
   const runExport = async (showToast = false, targetFlows?: Set<string>) => {
     const tag = getFlowTag();
     const contextLines = getContextLineCount();
@@ -58,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
       clearTimeout(debounceHandle);
     }
     debounceHandle = setTimeout(() => {
-      runExport();
+      runScan();
     }, debounceMs);
   };
 
@@ -70,7 +90,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('flowrider.refreshFlows', async () => {
-      await runExport(true);
+      await runScan();
     })
   );
 
@@ -189,6 +209,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   async function rehydrateAndPush(flowName: string) {
     await hydrateFlowByName(flowName, true);
+    await runScan();
   }
 
   context.subscriptions.push(
@@ -218,6 +239,7 @@ export async function activate(context: vscode.ExtensionContext) {
         };
         hydratedCache.set(flowName, updated);
         viewProvider.pushHydrated(flowName, updated);
+        await runScan();
       }
     )
   );
@@ -240,14 +262,18 @@ export async function activate(context: vscode.ExtensionContext) {
         const absPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!absPath) return;
         const success = await insertSingleComment(absPath, annotation, line);
-        if (success) {
-          await rehydrateAndPush(flowName);
+        if (!success) {
+          vscode.window.showWarningMessage(
+            `Could not insert comment for ${flowName} at line ${line}. Check file path/permissions.`
+          );
+          return;
         }
+        await rehydrateAndPush(flowName);
       }
     )
   );
 
-  await runExport();
+  await runScan();
 }
 
 export function deactivate() {

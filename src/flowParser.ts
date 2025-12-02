@@ -30,6 +30,8 @@ function runRipgrepOnFolder(
       '--glob',
       '!.git',
       '--glob',
+      '!.codeflows',
+      '--glob',
       '!node_modules',
       '--glob',
       '!dist',

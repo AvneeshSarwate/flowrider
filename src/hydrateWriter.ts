@@ -111,15 +111,27 @@ export async function insertSingleComment(
   line: number
 ): Promise<boolean> {
   const tag = getFlowTag();
-  const absPath = path.join(workspacePath, annotation.filePath);
-  const content = await fs.promises.readFile(absPath, 'utf8').catch(() => undefined);
+  const targetPath = path.isAbsolute(annotation.filePath)
+    ? annotation.filePath
+    : path.join(workspacePath, annotation.filePath);
+  const content = await fs.promises.readFile(targetPath, 'utf8').catch(() => undefined);
   if (!content) return false;
   const lines = content.split(/\r?\n/);
+
+  // Avoid duplicates
+  const already = lines.some(
+    (lineText) =>
+      isFlowComment(lineText, tag) &&
+      lineText.includes(annotation.flowName) &&
+      lineText.includes(annotation.currentNode) &&
+      lineText.includes(annotation.nextNode)
+  );
+  if (already) return true;
 
   const idx = Math.min(Math.max(line - 1, 0), lines.length);
   const targetIndex = idx < lines.length && isFlowComment(lines[idx], tag) ? idx + 1 : idx;
   const commentLine = buildCommentLine(annotation.rawComment, tag);
   lines.splice(targetIndex, 0, commentLine);
-  await fs.promises.writeFile(absPath, lines.join('\n'), 'utf8');
+  await fs.promises.writeFile(targetPath, lines.join('\n'), 'utf8');
   return true;
 }
