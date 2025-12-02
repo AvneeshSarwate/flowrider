@@ -45,11 +45,14 @@ const NodePopup: React.FC<Props> = ({ flows, selection, onClose, onOpenLocation 
                 >
                   <div className="location-main">
                     <span className="dot" aria-hidden />
+                    <span className="location-next">→ {edge.nextPos}</span>
                     <span className="location-name">
                       {toFilename(edge.filePath)}:{edge.lineNumber}
                     </span>
                   </div>
-                  <div className="location-sub">{edge.filePath}</div>
+                  <div className="location-sub">
+                    {edge.filePath}
+                  </div>
                 </button>
               ))}
             </div>

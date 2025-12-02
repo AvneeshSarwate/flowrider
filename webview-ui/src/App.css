@@ -450,6 +450,7 @@
   align-items: center;
   gap: 8px;
   font-weight: 600;
+  flex-wrap: wrap;
 }
 
 .dot {
@@ -457,6 +458,11 @@
   height: 8px;
   border-radius: 50%;
   background: var(--vscode-charts-blue);
+}
+
+.location-next {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
 }
 
 .location-name {
