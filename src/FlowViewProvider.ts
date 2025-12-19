@@ -14,7 +14,10 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
   private flows: FlowSummary[] = [];
   private malformed: MalformedComment[] = [];
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly sessionId: string
+  ) {}
 
   private get isDev(): boolean {
     // Only use dev server when explicitly enabled to avoid broken webview in normal debug runs.
@@ -85,6 +88,7 @@ export class FlowViewProvider implements vscode.WebviewViewProvider {
 
     const payload: ExtensionMessage = {
       type: 'flowsUpdated',
+      sessionId: this.sessionId,
       flows: this.flows,
       malformed: this.malformed,
     };

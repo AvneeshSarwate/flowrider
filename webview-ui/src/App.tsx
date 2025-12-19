@@ -15,6 +15,7 @@ function App() {
   const setMovedCandidates = useFlowStore((state) => state.setMovedCandidates);
   const selectedNode = useFlowStore((state) => state.selectedNode);
   const setFlows = useFlowStore((state) => state.setFlows);
+  const setSessionId = useFlowStore((state) => state.setSessionId);
   const clearSelection = useFlowStore((state) => state.clearSelection);
 
   useEffect(() => {
@@ -22,6 +23,8 @@ function App() {
       const message = event.data;
       if (message?.type === 'flowsUpdated') {
         console.log('webview flowsUpdated', message.flows.length);
+        // Set session ID first to restore/invalidate persisted state
+        setSessionId(message.sessionId);
         setFlows(message.flows, message.malformed ?? []);
       }
       if (message?.type === 'missingEdgeCandidates') {
@@ -40,7 +43,7 @@ function App() {
     return () => {
       window.removeEventListener('message', handler);
     };
-  }, [setFlows, setMissingCandidates, setMovedCandidates]);
+  }, [setFlows, setSessionId, setMissingCandidates, setMovedCandidates]);
 
   const handleOpenLocation = (filePath: string, lineNumber: number) => {
     console.log('handleOpenLocation', filePath, lineNumber);

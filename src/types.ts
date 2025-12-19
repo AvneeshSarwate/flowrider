@@ -213,6 +213,7 @@ export interface MovedEdgeCandidates {
 export type ExtensionMessage =
   | {
       type: 'flowsUpdated';
+      sessionId: string;
       flows: FlowSummary[];
       malformed: MalformedComment[];
     }

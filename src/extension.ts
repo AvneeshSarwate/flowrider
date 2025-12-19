@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { FlowViewProvider } from './FlowViewProvider';
 import { getContextLineCount, getDebounceMs, getFlowTag } from './config';
@@ -15,10 +16,14 @@ export async function activate(context: vscode.ExtensionContext) {
     return;
   }
 
+  // Generate a unique session ID for this activation - used to invalidate
+  // persisted webview state on VS Code restart
+  const sessionId = crypto.randomUUID();
+
   const workspaceFolder = workspaceFolders[0]; // monorepo v0
   const store = new FlowStore(workspaceFolder);
   const remapEngine = new RemapEngine(workspaceFolder.uri.fsPath);
-  const viewProvider = new FlowViewProvider(context);
+  const viewProvider = new FlowViewProvider(context, sessionId);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(FlowViewProvider.viewId, viewProvider)
