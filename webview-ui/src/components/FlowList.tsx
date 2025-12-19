@@ -59,7 +59,14 @@ const FlowList: React.FC<Props> = ({ flows }) => {
               <div className="flow-body">
                 <FlowDiagram
                   flow={flow}
-                  onNodeClick={(nodeName) => selectNode({ flowName: flow.name, nodeName })}
+                  onNodeClick={(nodeName) => {
+                    const occurrences = flow.edges.filter((edge) => edge.currentPos === nodeName);
+                    if (occurrences.length === 1) {
+                      vscode?.postMessage({ type: 'openLocation', filePath: occurrences[0].filePath, lineNumber: occurrences[0].lineNumber });
+                    } else {
+                      selectNode({ flowName: flow.name, nodeName });
+                    }
+                  }}
                 />
                 <DuplicatesPanel
                   duplicates={flow.duplicates}
