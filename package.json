@@ -118,6 +118,7 @@
     "diff": "^8.0.2",
     "jsonc-parser": "^3.3.1",
     "string-similarity": "^4.0.4",
+    "svg-pan-zoom": "^3.6.2",
     "typescript": "^5.9.3"
   }
 }
