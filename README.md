@@ -140,3 +140,8 @@ Initial release:
 - Jump-to-code navigation
 - Automatic workspace scanning on file save
 - Parsing error display
+
+### Instructions for coding agents to help them write better flow comments
+- add a description at each comment of why that step is important 
+- the goal of flow comments is to make it easy to trace flows, and this requires a good balance of high level vs low level annotation - being too-detailed about things where i can just read them in a single file is bad for high level naviation, but also, if something is actually tricky even if it's in the same file and near another comment, it's worth annotating 
+- the format is purposefully flexible - the "flow_name" can actually be several disconnected graphs. also, when annotating out a feature, you can use several different named flows if that feels more organized. for things that are complicated, sometimes you want a high level flow and then encapsulated subflows - for this, you could use skip-connection type things (like a graph having A => D and also A => B => C => D) or use one flow_name for a high level annotation, and then different flow_names for the sub flows 
