@@ -141,7 +141,12 @@ Initial release:
 - Automatic workspace scanning on file save
 - Parsing error display
 
-### Instructions for coding agents to help them write better flow comments
-- add a description at each comment of why that step is important 
-- the goal of flow comments is to make it easy to trace flows, and this requires a good balance of high level vs low level annotation - being too-detailed about things where i can just read them in a single file is bad for high level naviation, but also, if something is actually tricky even if it's in the same file and near another comment, it's worth annotating 
-- the format is purposefully flexible - the "flow_name" can actually be several disconnected graphs. also, when annotating out a feature, you can use several different named flows if that feels more organized. for things that are complicated, sometimes you want a high level flow and then encapsulated subflows - for this, you could use skip-connection type things (like a graph having A => D and also A => B => C => D) or use one flow_name for a high level annotation, and then different flow_names for the sub flows 
+### Writing good flow comments (and instructions for coding agents)
+
+- **Add a description at each comment** explaining why that step is important, not just what it does.
+- **Balance high-level vs low-level.** The goal is easy flow tracing. Being too detailed about things readable in a single file hurts high-level navigation. But if something is genuinely tricky — even if it's nearby another comment in the same file — it's worth annotating.
+- **The format is flexible.** A `flow_name` can contain several disconnected graphs. When annotating a feature, use multiple flow names if that feels more organized.
+- **Every edge must be unique within a flow.** After adding all comments, scan for duplicate `CURRENT_POS => NEXT_POS` pairs within the same `FLOW_NAME`. If two locations share the same edge (e.g. a dispatch site and its reducer both represent "action → state_change"), rename the nodes to distinguish them (e.g. `dispatch_action => reduce_state` and `reduce_state => state_changed`). Duplicate edges make graphs less useful.
+- **Use hierarchical flows for complex features.** For complicated flows, create a high-level flow and encapsulated subflows:
+    - Skip-connection style: one graph with both `A => D` and `A => B => C => D`
+    - Or use one `flow_name` for the high-level overview and different `flow_name`s for the subflows
