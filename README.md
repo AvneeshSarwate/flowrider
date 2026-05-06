@@ -71,6 +71,17 @@ Flow Rider automatically rescans your workspace when you save any file. The scan
 - Use multiple flows to document different aspects of your system (e.g., `auth-flow`, `data-flow`, `error-handling`)
 - The sidebar shows parsing errors at the bottom if any comments are malformed
 
+### Writing good flow comments (and instructions for coding agents)
+
+- **Add a comment description at each flow-comment annotation** it should explain why that step is important, not just what it does.
+- **Balance high-level vs low-level.** The goal is easy flow tracing. Being too detailed about things readable in a single file hurts high-level navigation. But if something is genuinely tricky — even if it's nearby another comment in the same file — it's worth annotating.
+- **The format is flexible.** A `flow_name` can contain several disconnected graphs. When annotating a feature, use multiple flow names if that feels more organized.
+- **Every edge must be unique within a flow.** After adding all comments, scan for duplicate `CURRENT_POS => NEXT_POS` pairs within the same `FLOW_NAME`. If two locations share the same edge (e.g. a dispatch site and its reducer both represent "action → state_change"), rename the nodes to distinguish them (e.g. `dispatch_action => reduce_state` and `reduce_state => state_changed`). Duplicate edges make graphs less useful.
+- **Use hierarchical flows for complex features.** For complicated flows, create a high-level flow and encapsulated subflows:
+    - Skip-connection style: one graph with both `A => D` and `A => B => C => D`
+    - Or use one `flow_name` for the high-level overview and different `flow_name`s for the subflows
+
+
 ## Development
 
 ### Quick Start
@@ -140,13 +151,3 @@ Initial release:
 - Jump-to-code navigation
 - Automatic workspace scanning on file save
 - Parsing error display
-
-### Writing good flow comments (and instructions for coding agents)
-
-- **Add a description at each comment** explaining why that step is important, not just what it does.
-- **Balance high-level vs low-level.** The goal is easy flow tracing. Being too detailed about things readable in a single file hurts high-level navigation. But if something is genuinely tricky — even if it's nearby another comment in the same file — it's worth annotating.
-- **The format is flexible.** A `flow_name` can contain several disconnected graphs. When annotating a feature, use multiple flow names if that feels more organized.
-- **Every edge must be unique within a flow.** After adding all comments, scan for duplicate `CURRENT_POS => NEXT_POS` pairs within the same `FLOW_NAME`. If two locations share the same edge (e.g. a dispatch site and its reducer both represent "action → state_change"), rename the nodes to distinguish them (e.g. `dispatch_action => reduce_state` and `reduce_state => state_changed`). Duplicate edges make graphs less useful.
-- **Use hierarchical flows for complex features.** For complicated flows, create a high-level flow and encapsulated subflows:
-    - Skip-connection style: one graph with both `A => D` and `A => B => C => D`
-    - Or use one `flow_name` for the high-level overview and different `flow_name`s for the subflows
