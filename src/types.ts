@@ -211,6 +211,8 @@ export interface MovedEdgeCandidates {
 }
 
 export type ExtensionMessage =
+  | { type: 'reviewUpdated'; html?: string; metadata?: import('./diffReview').ReviewMetadata; files?: import('./diffReview').ReviewFile[] }
+  | { type: 'reviewError'; error: string }
   | {
       type: 'flowsUpdated';
       sessionId: string;
@@ -227,6 +229,10 @@ export type ExtensionMessage =
     };
 
 export type WebviewMessage =
+  | { type: 'loadReview'; reload?: boolean }
+  | { type: 'requestReview' }
+  | { type: 'openReviewLink'; href: string }
+  | { type: 'openReviewFile'; filePath: string }
   | { type: 'openLocation'; filePath: string; lineNumber: number }
   | { type: 'requestFlows' }
   | { type: 'writeFlowToDb'; flowName: string }

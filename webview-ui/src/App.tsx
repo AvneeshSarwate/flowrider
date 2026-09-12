@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import DiffReview from './components/DiffReview';
 import FlowList from './components/FlowList';
 import NodePopup from './components/NodePopup';
 import { useFlowStore } from './store';
@@ -9,6 +10,7 @@ import './App.css';
 const toFilename = (filePath: string) => filePath.split(/[\\/]/).pop() ?? filePath;
 
 function App() {
+  const [tab, setTab] = useState('flows');
   const flows = useFlowStore((state) => state.flows);
   const malformed = useFlowStore((state) => state.malformed);
   const setMissingCandidates = useFlowStore((state) => state.setMissingCandidates);
@@ -51,21 +53,26 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${tab === 'review' ? 'app-review' : ''}`}>
       <header className="topbar">
         <div className="title-block">
           <div className="title">Flow Rider</div>
-          <div className="subtitle">Flow comments → Mermaid DAGs</div>
         </div>
-        <button
+        <nav className="review-tabs" aria-label="Flow Rider modes">
+          <button aria-pressed={tab === 'flows'} onClick={() => setTab('flows')}>Flows</button>
+          <button aria-pressed={tab === 'review'} onClick={() => { clearSelection(); setTab('review'); }}>Diff Review</button>
+        </nav>
+        {tab === 'flows' && <button
           className="ghost-button"
           title="Request latest flows"
           onClick={() => vscode?.postMessage({ type: 'requestFlows' })}
         >
           ↻
-        </button>
+        </button>}
       </header>
 
+      <div className="review-host" hidden={tab !== 'review'}><DiffReview /></div>
+      <div hidden={tab !== 'flows'}>
       {flows.length === 0 && malformed.length === 0 ? (
         <div className="empty-state">
           <div className="empty-title">No flow comments found</div>
@@ -106,6 +113,7 @@ function App() {
         onClose={clearSelection}
         onOpenLocation={handleOpenLocation}
       />
+      </div>
     </div>
   );
 }

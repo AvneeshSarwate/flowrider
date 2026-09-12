@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
+import { FlowEditorPanel } from './FlowEditorPanel';
 import { FlowViewProvider } from './FlowViewProvider';
 import { getContextLineCount, getDebounceMs, getFlowTag } from './config';
 import { exportFlows } from './exporter';
@@ -8,6 +9,7 @@ import { FlowStore } from './flowStore';
 import { insertSingleComment } from './hydrateWriter';
 import { RemapEngine } from './remapper';
 import { MissingEdge, MissingEdgeCandidates, MovedEdge, MovedEdgeCandidates } from './types';
+import { FlowWebviewManager } from './webviewUtils';
 
 export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -23,7 +25,15 @@ export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = workspaceFolders[0]; // monorepo v0
   const store = new FlowStore(workspaceFolder);
   const remapEngine = new RemapEngine(workspaceFolder.uri.fsPath);
-  const viewProvider = new FlowViewProvider(context, sessionId);
+
+  // Shared webview manager
+  const webviewManager = new FlowWebviewManager(context, sessionId);
+
+  // Sidebar view provider
+  const viewProvider = new FlowViewProvider(context, webviewManager);
+
+  // Editor panel instance (created on demand)
+  let editorPanel: FlowEditorPanel | null = null;
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(FlowViewProvider.viewId, viewProvider)
@@ -39,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
       await store.load();
       const scan = await import('./flowParser.js').then((m) => m.scanWorkspace(tag, contextLines));
       const summaries = computeFlowSummaries(store.getAllFlows(), scan.parsed);
-      viewProvider.update(summaries, scan.malformed);
+      webviewManager.update(summaries, scan.malformed);
       lastScanError = undefined;
     } catch (error) {
       const message =
@@ -58,7 +68,7 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
       const result = await exportFlows(store, tag, contextLines, targetFlows);
       const summaries = computeFlowSummaries(result.flows, result.parsed);
-      viewProvider.update(summaries, store.getMalformed());
+      webviewManager.update(summaries, store.getMalformed());
       lastScanError = undefined;
       if (showToast) {
         vscode.window.showInformationMessage('FlowRider flows exported to DB.');
@@ -162,7 +172,7 @@ export async function activate(context: vscode.ExtensionContext) {
           edgeKey,
           candidates,
         };
-        viewProvider.pushMissingCandidates(data);
+        webviewManager.pushMissingCandidates(data);
       }
     )
   );
@@ -219,9 +229,38 @@ export async function activate(context: vscode.ExtensionContext) {
           edgeKey,
           candidates,
         };
-        viewProvider.pushMovedCandidates(data);
+        webviewManager.pushMovedCandidates(data);
       }
     )
+  );
+
+  // Command to open in editor panel
+  context.subscriptions.push(
+    vscode.commands.registerCommand('flowrider.openInEditor', () => {
+      // Dispose existing panel if any
+      if (editorPanel && !editorPanel.isDisposed()) {
+        editorPanel.reveal();
+        return;
+      }
+
+      // Create new editor panel
+      editorPanel = FlowEditorPanel.create(webviewManager, context);
+    })
+  );
+
+  // Command to open in sidebar
+  context.subscriptions.push(
+    vscode.commands.registerCommand('flowrider.openInSidebar', () => {
+      // Dispose editor panel if open
+      if (editorPanel && !editorPanel.isDisposed()) {
+        editorPanel.dispose();
+        editorPanel = null;
+      }
+
+      // Activate sidebar and reveal it
+      viewProvider.activate();
+      vscode.commands.executeCommand('flowrider.flowsView.focus');
+    })
   );
 
   await runScan();

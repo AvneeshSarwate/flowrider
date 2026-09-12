@@ -1,5 +1,9 @@
 {
   "name": "flowrider",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AvneeshSarwate/flowrider.git"
+  },
   "displayName": "flowRider",
   "description": "A tool for viewing logical flows thrugh a codebase",
   "version": "0.0.1",
@@ -16,7 +20,9 @@
     "onCommand:flowrider.hydrateFlow",
     "onCommand:flowrider.clearHydration",
     "onCommand:flowrider.writeFlowToDb",
-    "onCommand:flowrider.hydrateFlowByName"
+    "onCommand:flowrider.hydrateFlowByName",
+    "onCommand:flowrider.openInEditor",
+    "onCommand:flowrider.openInSidebar"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -90,6 +96,14 @@
       {
         "command": "flowrider.hydrateFlowByName",
         "title": "FlowRider: Hydrate Flow By Name"
+      },
+      {
+        "command": "flowrider.openInEditor",
+        "title": "FlowRider: Open in Editor"
+      },
+      {
+        "command": "flowrider.openInSidebar",
+        "title": "FlowRider: Open in Sidebar"
       }
     ]
   },
