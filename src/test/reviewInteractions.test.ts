@@ -26,7 +26,7 @@ suite('Review document interactions', () => {
           if (message.type === 'requestReview') {
             void panel.webview.postMessage({ type: 'reviewUpdated', html, metadata: parseReview(html), files: [
               ...Array.from({ length: 150 }, (_, i) => ({ path: `webview-ui/src/components/A${i}.tsx`, status: 'M', additions: 1, deletions: 2 })),
-              { path: target, status: 'M', additions: 3, deletions: 4 },
+              { path: target, status: 'M', additions: 3, deletions: 4, significantAdditions: 1, significantDeletions: 2 },
             ] });
           }
           if (message.type === 'openReviewLink') { navigations++; }
@@ -58,6 +58,7 @@ suite('Review document interactions', () => {
               check(selected.querySelector('.review-lines-removed').textContent==='−4','File deletions missing');
               const summaries=[...document.querySelectorAll('.review-tree summary')];
               check(summaries.length===3 && summaries.every(s=>s.querySelector('.review-lines-added').textContent==='+153' && s.querySelector('.review-lines-removed').textContent==='−304'),'Recursive folder totals incorrect');
+              check(summaries.every(s=>getComputedStyle(s.querySelector('.review-line-counts')).visibility==='hidden'),'Expanded directory counts should be hidden');
               const countLeft=selected.querySelector('.review-line-counts').getBoundingClientRect().left;
               check(summaries.every(s=>Math.abs(s.querySelector('.review-line-counts').getBoundingClientRect().left-countLeft)<1),'Directory and file count columns are misaligned');
               check(filter.value==='','Filter not cleared');
@@ -67,7 +68,24 @@ suite('Review document interactions', () => {
               check(frame.getBoundingClientRect().top===diagramTop,'Tree reveal moved diagram');
               if(phase===2)collapse();else details.querySelector('summary span').click();
             }else if(phase===3){details.querySelector('a').click();}
-            else{check(!details.open,'Summary click did not collapse details');clearInterval(poll);api.postMessage({type:'interactionDone'});}
+            else if(phase===5){
+              check(!details.open,'Summary click did not collapse details');
+              document.querySelector('[aria-label="Show significant LOC"]').click();
+              document.querySelector('[aria-label="Collapse all folders"]').click();
+            }else if(phase===6){
+              const summary=document.querySelector('.review-tree summary');
+              check(getComputedStyle(summary.querySelector('.review-line-counts')).visibility==='visible','Collapsed directory counts missing');
+              check(summary.querySelector('.review-lines-added').textContent==='+151','Significant directory additions incorrect');
+              check(summary.querySelector('.review-lines-removed').textContent==='−302','Significant directory deletions incorrect');
+              document.querySelector('[aria-label="Expand all folders"]').click();
+            }else if(phase===7){
+              const selected=document.querySelector('.review-file[aria-pressed="true"]');
+              check(selected.querySelector('.review-lines-added').textContent==='+1','Significant file additions incorrect');
+              document.querySelector('[aria-label="Show significant LOC"]').click();
+            }else{
+              check(document.querySelector('.review-file[aria-pressed="true"] .review-lines-added').textContent==='+3','LOC toggle did not restore counts');
+              clearInterval(poll);api.postMessage({type:'interactionDone'});
+            }
             phase++;
           }catch(error){clearInterval(poll);api.postMessage({type:'interactionError',error:String(error)});}
         },150);

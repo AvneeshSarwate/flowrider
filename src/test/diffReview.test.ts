@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { DiffReview, parseReview, parseReviewLink } from '../diffReview';
+import { DiffReview, parseReview, parseReviewLink, isSignificantLine } from '../diffReview';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -109,8 +109,8 @@ suite('Diff Review', () => {
       const writeReview = async (head: string) => fs.writeFile(source.fsPath, `<script id="flowrider-review">${JSON.stringify({ version: 1, base, head })}</script>`);
       await writeReview('HEAD'); await review.loadDocument(source);
       assert.deepStrictEqual(review.state?.files, [
-        { path: 'added.ts', status: 'A', additions: 1, deletions: 0 }, { path: 'deleted.ts', status: 'D', additions: 0, deletions: 1 },
-        { path: 'file.ts', status: 'M', additions: 2, deletions: 1 }, { path: 'new name.ts', basePath: 'old name.ts', status: 'R', additions: 0, deletions: 0 },
+        { path: 'added.ts', status: 'A', additions: 1, deletions: 0, significantAdditions: 1, significantDeletions: 0 }, { path: 'deleted.ts', status: 'D', additions: 0, deletions: 1, significantAdditions: 0, significantDeletions: 1 },
+        { path: 'file.ts', status: 'M', additions: 2, deletions: 1, significantAdditions: 2, significantDeletions: 1 }, { path: 'new name.ts', basePath: 'old name.ts', status: 'R', additions: 0, deletions: 0, significantAdditions: 0, significantDeletions: 0 },
       ]);
       await review.openFile('deleted.ts');
       const deleted = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
@@ -133,10 +133,17 @@ suite('Diff Review', () => {
       assert.ok(added instanceof vscode.TabInputTextDiff);
       assert.strictEqual((await vscode.workspace.openTextDocument(added.original)).getText(), '');
       await fs.writeFile(path.join(root, 'binary.dat'), Buffer.from([0, 1, 2]));
+      await fs.writeFile(path.join(root, 'comments.ts'), '// comment\n\nconst value = 1;\n');
+      await fs.writeFile(path.join(root, 'file.ts'), 'one\n// comment\n\nnew\nthree\n');
       await writeReview('working-tree');
       const workingReview = await review.loadDocument(source);
       assert.strictEqual(workingReview.files.find(file => file.path === 'review.html')?.additions, 1);
       assert.strictEqual(workingReview.files.find(file => file.path === 'binary.dat')?.binary, true);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'comments.ts')?.additions, 3);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'comments.ts')?.significantAdditions, 1);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'file.ts')?.additions, 4);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'file.ts')?.significantAdditions, 2);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'file.ts')?.significantDeletions, 1);
       assert.ok(review.state?.files.some(file => file.path === 'review.html' && file.status === 'A'));
       await fs.writeFile(path.join(root, 'file.ts'), 'saved\nchanged\n');
       await review.open('flowrider://diff?path=file.ts&line=2');
@@ -148,6 +155,12 @@ suite('Diff Review', () => {
     } finally { review.dispose(); await fs.rm(root, { recursive: true, force: true }); }
   });
   test('metadata and exact right-side links', () => {
+    assert.strictEqual(isSignificantLine(' // explanation', 'code.ts'), false);
+    assert.strictEqual(isSignificantLine('/* explanation */ const x = 1;', 'code.ts'), true);
+    assert.strictEqual(isSignificantLine('  ', 'code.ts'), false);
+    assert.strictEqual(isSignificantLine('const url = "https://example.com";', 'code.ts'), true);
+    assert.strictEqual(isSignificantLine('# heading', 'readme.md'), true);
+    assert.strictEqual(isSignificantLine('# comment', 'script.py'), false);
     assert.strictEqual(parseReview('<script type="application/json" id="flowrider-review">{"version":1,"base":"HEAD","head":"working-tree"}</script>').head, 'working-tree');
     assert.deepStrictEqual(parseReviewLink('flowrider://diff?path=src%2Fa.ts&line=87'), { file: 'src/a.ts', basePath: 'src/a.ts', line: 87 });
     for (const href of ['flowrider://diff?path=../secret&line=1', 'flowrider://diff?path=a&line=0', 'flowrider://diff?path=a&line=2&side=base']) {assert.throws(() => parseReviewLink(href));}

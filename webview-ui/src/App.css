@@ -704,6 +704,7 @@ button {
 .review-file[aria-pressed="true"] { background: var(--vscode-list-inactiveSelectionBackground, #8883); }
 .review-line-counts { display: inline-flex; gap: 6px; margin-left: auto; flex-shrink: 0; font-size: 11px; font-variant-numeric: tabular-nums; font-weight: normal; }
 .review-tree summary > .review-line-counts { float: right; margin-right: 26px; }
+.review-tree details[open] > summary > .review-line-counts { visibility: hidden; }
 .review-line-counts > span { width: var(--review-count-width); text-align: right; }
 .review-lines-added { color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b); }
 .review-lines-removed { color: var(--vscode-gitDecoration-deletedResourceForeground, #f48771); }

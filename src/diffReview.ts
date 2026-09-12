@@ -6,7 +6,25 @@ import { promisify } from 'util';
 
 const exec = promisify(execFile);
 export interface ReviewMetadata { version: 1; base: string; head: string; repository?: string; title?: string; mode?: 'canvas' | 'document' }
-export interface ReviewFile { path: string; status: string; basePath?: string; additions?: number; deletions?: number; binary?: boolean }
+export interface ReviewFile { path: string; status: string; basePath?: string; additions?: number; deletions?: number; significantAdditions?: number; significantDeletions?: number; binary?: boolean }
+
+// A lightweight, language-aware approximation, not a parser-based code metric.
+export function isSignificantLine(line: string, file: string): boolean {
+  const text = line.trim();
+  if (!text) { return false; }
+  const ext = path.extname(file).toLowerCase();
+  if (/^\.(js|jsx|ts|tsx|java|c|h|cpp|hpp|cs|go|rs|swift|kt|css|scss|less|php)$/.test(ext)) {
+    if (text.startsWith('//')) { return false; }
+    if (/^(\/\*|\*\/|\*(?:\s|$))/.test(text)) {
+      const end = text.indexOf('*/');
+      if (end < 0 || !text.slice(end + 2).trim()) { return false; }
+    }
+  }
+  if (/^\.(py|rb|sh|bash|zsh|yml|yaml|toml|pl|r)$/.test(ext) && text.startsWith('#')) { return false; }
+  if (ext === '.sql' && text.startsWith('--')) { return false; }
+  if (/^\.(html|htm|xml|svg|md)$/.test(ext) && /^<!--.*-->$/.test(text)) { return false; }
+  return true;
+}
 
 export function parseReview(html: string): ReviewMetadata {
   const block = html.match(/<script\b[^>]*\bid=["']flowrider-review["'][^>]*>([\s\S]*?)<\/script\s*>/i);
@@ -96,8 +114,24 @@ export class DiffReview implements vscode.Disposable {
           const binary = content.subarray(0, 8000).includes(0);
           const additions = content.reduce((count, byte) => count + (byte === 10 ? 1 : 0), 0)
             + (content.length && content[content.length - 1] !== 10 ? 1 : 0);
-          files.push({ path: file, status: 'A', ...(binary ? { binary: true } : { additions, deletions: 0 }) });
+          files.push({ path: file, status: 'A', ...(binary ? { binary: true } : { additions, deletions: 0,
+            significantAdditions: content.toString('utf8').split('\n').filter(line => isSignificantLine(line, file)).length, significantDeletions: 0 }) });
         }
+      }
+    }
+    for (const file of files) {
+      if (file.binary || file.significantAdditions !== undefined) { continue; }
+      file.significantAdditions = 0; file.significantDeletions = 0;
+      if (!file.additions && !file.deletions) { continue; }
+      const patch = await this.git(root, ['--literal-pathspecs', 'diff', '--no-color', '--no-ext-diff', '--no-textconv', '--unified=0', '--find-renames', metadata.base,
+        ...(metadata.head === 'working-tree' ? [] : [metadata.head]), '--', file.path, ...(file.basePath ? [file.basePath] : [])]);
+      let inHunk = false;
+      for (const line of patch.split('\n')) {
+        if (line.startsWith('diff --git ')) { inHunk = false; }
+        if (line.startsWith('@@ ')) { inHunk = true; continue; }
+        if (!inHunk || !isSignificantLine(line.slice(1), file.path)) { continue; }
+        if (line.startsWith('+')) { file.significantAdditions++; }
+        if (line.startsWith('-')) { file.significantDeletions++; }
       }
     }
     files.sort((a, b) => a.path.localeCompare(b.path));
