@@ -25,8 +25,8 @@ suite('Review document interactions', () => {
         subscriptions.push(panel.webview.onDidReceiveMessage(message => {
           if (message.type === 'requestReview') {
             void panel.webview.postMessage({ type: 'reviewUpdated', html, metadata: parseReview(html), files: [
-              ...Array.from({ length: 150 }, (_, i) => ({ path: `webview-ui/src/components/A${i}.tsx`, status: 'M' })),
-              { path: target, status: 'M' },
+              ...Array.from({ length: 150 }, (_, i) => ({ path: `webview-ui/src/components/A${i}.tsx`, status: 'M', additions: 1, deletions: 2 })),
+              { path: target, status: 'M', additions: 3, deletions: 4 },
             ] });
           }
           if (message.type === 'openReviewLink') { navigations++; }
@@ -54,6 +54,12 @@ suite('Review document interactions', () => {
             else if(phase===2 || phase===4){
               const selected=document.querySelector('.review-file[aria-pressed="true"]');
               check(selected?.textContent.includes('DiffReview.tsx'),'Target not selected');
+              check(selected.querySelector('.review-lines-added').textContent==='+3','File additions missing');
+              check(selected.querySelector('.review-lines-removed').textContent==='−4','File deletions missing');
+              const summaries=[...document.querySelectorAll('.review-tree summary')];
+              check(summaries.length===3 && summaries.every(s=>s.querySelector('.review-lines-added').textContent==='+153' && s.querySelector('.review-lines-removed').textContent==='−304'),'Recursive folder totals incorrect');
+              const countLeft=selected.querySelector('.review-line-counts').getBoundingClientRect().left;
+              check(summaries.every(s=>Math.abs(s.querySelector('.review-line-counts').getBoundingClientRect().left-countLeft)<1),'Directory and file count columns are misaligned');
               check(filter.value==='','Filter not cleared');
               const scroller=document.querySelector('.review-tree-scroll');
               const row=selected.getBoundingClientRect(), bounds=scroller.getBoundingClientRect();

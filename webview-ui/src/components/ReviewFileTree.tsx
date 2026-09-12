@@ -1,9 +1,12 @@
 import vscode from '../vscode';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 
-export interface ReviewFile { path: string; status: string; basePath?: string }
+export interface ReviewFile { path: string; status: string; basePath?: string; additions?: number; deletions?: number; binary?: boolean }
 interface Folder { folders: Map<string, Folder>; files: ReviewFile[] }
 const folder = (): Folder => ({ folders: new Map(), files: [] });
+const lineCounts = (additions = 0, deletions = 0) => <span className="review-line-counts" aria-label={`${additions} added lines, ${deletions} removed lines`}>
+  <span className="review-lines-added">+{additions}</span><span className="review-lines-removed">−{deletions}</span>
+</span>;
 const statuses: Record<string, string> = { A: 'Added', M: 'Modified', D: 'Deleted', R: 'Renamed', C: 'Copied', T: 'Type changed' };
 
 export default function ReviewFileTree({ files, reveal }: { files: ReviewFile[]; reveal?: { path: string } | null }) {
@@ -36,6 +39,17 @@ export default function ReviewFileTree({ files, reveal }: { files: ReviewFile[];
   const matching = files.filter(file => file.path.toLowerCase().includes(filter.toLowerCase()));
   const expandAll = (value: boolean) => { setExpanded(value); setOverrides({}); };
   const root = folder();
+  const totals = new Map<string, { additions: number; deletions: number }>();
+  for (const file of files) {
+    const parts = file.path.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      const key = parts.slice(0, i).join('/');
+      const total = totals.get(key) ?? { additions: 0, deletions: 0 };
+      total.additions += file.additions ?? 0;
+      total.deletions += file.deletions ?? 0;
+      totals.set(key, total);
+    }
+  }
   for (const file of matching) {
     let current = root;
     for (const part of file.path.split('/').slice(0, -1)) {
@@ -50,7 +64,7 @@ export default function ReviewFileTree({ files, reveal }: { files: ReviewFile[];
         <summary onClick={event => {
           event.preventDefault();
           setOverrides(old => ({ ...old, [prefix + name]: !(old[prefix + name] ?? expanded) }));
-        }}>{name}</summary>
+        }}>{name}{lineCounts(totals.get(prefix + name)?.additions, totals.get(prefix + name)?.deletions)}</summary>
         <div className="review-tree-children">{render(child, prefix + name + '/')}</div>
       </details>)}
     {node.files.map(file => <button className="review-file" key={file.path}
@@ -58,10 +72,12 @@ export default function ReviewFileTree({ files, reveal }: { files: ReviewFile[];
       aria-pressed={selected === file.path}
       title={`${statuses[file.status] ?? file.status}: ${file.basePath ? file.basePath + ' → ' : ''}${file.path}`}
       onClick={() => { setSelected(file.path); vscode?.postMessage({ type: 'openReviewFile', filePath: file.path }); }}>
-      <span>{file.path.split('/').pop()}</span><span className={`file-status status-${file.status}`} aria-label={statuses[file.status] ?? file.status}>{file.status}</span>
+      <span>{file.path.split('/').pop()}</span>{file.binary ? <span className="review-line-counts">Binary</span> : lineCounts(file.additions, file.deletions)}<span className={`file-status status-${file.status}`} aria-label={statuses[file.status] ?? file.status}>{file.status}</span>
     </button>)}
   </>;
-  return <section className="review-tree" aria-label="Changed files">
+  const countWidth = 1 + [...files, ...totals.values()].reduce((width, item) =>
+    Math.max(width, String(item.additions ?? 0).length, String(item.deletions ?? 0).length), 1);
+  return <section className="review-tree" aria-label="Changed files" style={{ '--review-count-width': `${countWidth}ch` } as CSSProperties}>
     <div className="review-tree-title">Changed files <span>{files.length}</span>
       <div className="review-actions tree-actions">
         <button title="Expand all folders" aria-label="Expand all folders" onClick={() => expandAll(true)}>Expand all</button>

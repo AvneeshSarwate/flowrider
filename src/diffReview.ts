@@ -6,7 +6,7 @@ import { promisify } from 'util';
 
 const exec = promisify(execFile);
 export interface ReviewMetadata { version: 1; base: string; head: string; repository?: string; title?: string; mode?: 'canvas' | 'document' }
-export interface ReviewFile { path: string; status: string; basePath?: string }
+export interface ReviewFile { path: string; status: string; basePath?: string; additions?: number; deletions?: number; binary?: boolean }
 
 export function parseReview(html: string): ReviewMetadata {
   const block = html.match(/<script\b[^>]*\bid=["']flowrider-review["'][^>]*>([\s\S]*?)<\/script\s*>/i);
@@ -72,10 +72,32 @@ export class DiffReview implements vscode.Disposable {
         ? { path: entries[i++], basePath: oldPath, status }
         : { path: oldPath, status });
     }
+    const stats = (await this.git(root, ['diff', '--numstat', '-z', '--find-renames', metadata.base,
+      ...(metadata.head === 'working-tree' ? [] : [metadata.head]), '--'])).split('\0');
+    for (let i = 0; i < stats.length && stats[i];) {
+      const record = stats[i++];
+      const first = record.indexOf('\t'), second = record.indexOf('\t', first + 1);
+      const added = record.slice(0, first), removed = record.slice(first + 1, second);
+      let filePath = record.slice(second + 1);
+      if (!filePath) { i++; filePath = stats[i++]; }
+      const file = files.find(entry => entry.path === filePath);
+      if (file) {
+        if (added === '-' || removed === '-') { file.binary = true; }
+        else { file.additions = Number(added); file.deletions = Number(removed); }
+      }
+    }
     if (metadata.head === 'working-tree') {
       const untracked = (await this.git(root, ['ls-files', '--others', '--exclude-standard', '-z'])).split('\0').filter(Boolean);
       for (const file of untracked) {
-        if (!files.some(entry => entry.path === file)) { files.push({ path: file, status: 'A' }); }
+        if (!files.some(entry => entry.path === file)) {
+          const target = path.join(root, file);
+          const info = await fs.lstat(target);
+          const content = info.isSymbolicLink() ? Buffer.from(await fs.readlink(target)) : await fs.readFile(target);
+          const binary = content.subarray(0, 8000).includes(0);
+          const additions = content.reduce((count, byte) => count + (byte === 10 ? 1 : 0), 0)
+            + (content.length && content[content.length - 1] !== 10 ? 1 : 0);
+          files.push({ path: file, status: 'A', ...(binary ? { binary: true } : { additions, deletions: 0 }) });
+        }
       }
     }
     files.sort((a, b) => a.path.localeCompare(b.path));

@@ -109,8 +109,8 @@ suite('Diff Review', () => {
       const writeReview = async (head: string) => fs.writeFile(source.fsPath, `<script id="flowrider-review">${JSON.stringify({ version: 1, base, head })}</script>`);
       await writeReview('HEAD'); await review.loadDocument(source);
       assert.deepStrictEqual(review.state?.files, [
-        { path: 'added.ts', status: 'A' }, { path: 'deleted.ts', status: 'D' },
-        { path: 'file.ts', status: 'M' }, { path: 'new name.ts', basePath: 'old name.ts', status: 'R' },
+        { path: 'added.ts', status: 'A', additions: 1, deletions: 0 }, { path: 'deleted.ts', status: 'D', additions: 0, deletions: 1 },
+        { path: 'file.ts', status: 'M', additions: 2, deletions: 1 }, { path: 'new name.ts', basePath: 'old name.ts', status: 'R', additions: 0, deletions: 0 },
       ]);
       await review.openFile('deleted.ts');
       const deleted = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
@@ -132,7 +132,11 @@ suite('Diff Review', () => {
       const added = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
       assert.ok(added instanceof vscode.TabInputTextDiff);
       assert.strictEqual((await vscode.workspace.openTextDocument(added.original)).getText(), '');
-      await writeReview('working-tree'); await review.loadDocument(source);
+      await fs.writeFile(path.join(root, 'binary.dat'), Buffer.from([0, 1, 2]));
+      await writeReview('working-tree');
+      const workingReview = await review.loadDocument(source);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'review.html')?.additions, 1);
+      assert.strictEqual(workingReview.files.find(file => file.path === 'binary.dat')?.binary, true);
       assert.ok(review.state?.files.some(file => file.path === 'review.html' && file.status === 'A'));
       await fs.writeFile(path.join(root, 'file.ts'), 'saved\nchanged\n');
       await review.open('flowrider://diff?path=file.ts&line=2');
