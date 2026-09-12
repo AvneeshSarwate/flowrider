@@ -20,6 +20,7 @@ export default function DiffReview() {
   const [label, setLabel] = useState('');
   const [error, setError] = useState('');
   const [files, setFiles] = useState<ReviewFile[]>([]);
+  const [revealFile, setRevealFile] = useState<{ path: string } | null>(null);
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       // VS Code masks window.parent, so it cannot identify the host sender.
@@ -29,6 +30,7 @@ export default function DiffReview() {
       if (message?.type === 'reviewUpdated') {
         setHtml(message.html ?? ''); setError('');
         setFiles(message.files ?? []);
+        setRevealFile(null);
         const m = message.metadata;
         setMode(m?.mode ?? 'document');
         setLabel(m ? `${m.title ?? 'Review'} · ${m.base.slice(0, 8)} → ${m.head.slice(0, 12)}` : '');
@@ -75,11 +77,22 @@ export default function DiffReview() {
         }
         if (doc && mode === 'document') disposeEmbedded.current = attachEmbeddedDiagrams(doc, setError);
         doc?.addEventListener('click', e => {
-          e.preventDefault();
           const anchor = (e.target as Element).closest('a');
           const href = anchor?.getAttribute('href') ?? anchor?.getAttribute('xlink:href');
+          if (!href) return;
+          // Preserve native controls (especially details/summary). Only links
+          // need interception to prevent navigation out of the review document.
+          e.preventDefault();
           if (href?.startsWith('flowrider://')) {
+            try {
+              const url = new URL(href);
+              const path = url.searchParams.get('path');
+              if (url.hostname === 'diff' && path) setRevealFile({ path });
+            } catch { /* The extension reports invalid link errors. */ }
             setError(''); vscode?.postMessage({ type: 'openReviewLink', href });
+          } else if (href.startsWith('#')) {
+            try { doc.getElementById(decodeURIComponent(href.slice(1)))?.scrollIntoView(); }
+            catch { /* Ignore malformed fragment identifiers. */ }
           }
         });
       }} />
@@ -101,7 +114,7 @@ export default function DiffReview() {
             resize(event.key === 'Home' ? 15 : event.key === 'End' ? 85 : ratio + (event.key === 'ArrowUp' ? -5 : 5));
           }
         }} />
-      <ReviewFileTree files={files} />
+      <ReviewFileTree files={files} reveal={revealFile} />
       </div>}
   </section>;
 }

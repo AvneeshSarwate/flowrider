@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Disclosure and tree navigation test</title>
+<script id="flowrider-review" type="application/json">
+{"version":1,"title":"Disclosure and tree navigation","base":"HEAD","head":"working-tree","mode":"document"}
+</script>
+<style>body{font:15px/1.6 system-ui;color:#233348;background:#f6f8fc}details{margin:16px 0;padding:12px;border:1px solid #ccd5e0;border-radius:6px}summary{cursor:pointer;font-weight:600}a{color:#285fba}</style>
+</head><body><h1>Details and code links</h1>
+<p>Collapse the file tree and enter a filter that hides the target. Then open the disclosure and follow its code link: the tree should clear the filter, expand, select, and reveal that file.</p>
+<details><summary><span>Open this explanation</span></summary>
+<p>This native disclosure should open and close normally, including when you click the text inside the summary.</p>
+<a href="flowrider://diff?path=webview-ui%2Fsrc%2Fcomponents%2FDiffReview.tsx&amp;line=1">Open the review UI</a>
+<details><summary>Nested explanation</summary><p>Nested disclosures work too.</p>
+<a href="flowrider://diff?path=src%2FwebviewUtils.ts&amp;line=1">Open the host message handler</a></details>
+</details>
+<p><a href="flowrider://diff?path=webview-ui%2Fsrc%2Fcomponents%2FDiffReview.tsx&amp;line=1">Repeat the same code link</a> after collapsing the tree again.</p>
+</body></html>
