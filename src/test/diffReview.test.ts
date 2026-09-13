@@ -149,7 +149,34 @@ suite('Diff Review', () => {
       await review.open('flowrider://diff?path=file.ts&line=2');
       const working = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
       assert.ok(working instanceof vscode.TabInputTextDiff);
+      assert.strictEqual(working.modified.scheme, 'file');
+      assert.strictEqual(await fs.realpath(working.modified.fsPath), await fs.realpath(path.join(root, 'file.ts')));
+      assert.strictEqual(working.original.scheme, 'flowrider-review');
       assert.strictEqual((await vscode.workspace.openTextDocument(working.modified)).getText(), 'saved\nchanged\n');
+      const live = await vscode.workspace.openTextDocument(working.modified);
+      const edit = new vscode.WorkspaceEdit();
+      edit.insert(live.uri, new vscode.Position(2, 0), 'unsaved\nextra\n');
+      assert.ok(await vscode.workspace.applyEdit(edit));
+      try {
+        await review.open('flowrider://diff?path=file.ts&line=4');
+        assert.ok(live.isDirty);
+        assert.strictEqual(await fs.readFile(path.join(root, 'file.ts'), 'utf8'), 'saved\nchanged\n');
+        const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === live.uri.toString());
+        assert.strictEqual(editor?.selection.active.line, 3);
+        const definition = new vscode.Location(live.uri, new vscode.Position(0, 0));
+        const provider = vscode.languages.registerDefinitionProvider({ scheme: 'file', pattern: '**/file.ts' }, {
+          provideDefinition: () => [definition],
+        });
+        try {
+          const definitions = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeDefinitionProvider', live.uri, new vscode.Position(3, 0));
+          assert.ok(definitions?.some(result => result.uri?.toString() === live.uri.toString()), 'File-scheme definition provider is available in the working-tree diff');
+        } finally { provider.dispose(); }
+      } finally {
+        const undo = new vscode.WorkspaceEdit();
+        undo.replace(live.uri, new vscode.Range(0, 0, live.lineCount, 0), 'saved\nchanged\n');
+        await vscode.workspace.applyEdit(undo);
+        await live.save();
+      }
       await assert.rejects(review.open('flowrider://diff?path=file.ts&line=99'), /beyond the end/);
       await assert.rejects(review.open('flowrider://diff?path=missing.ts&line=1'));
     } finally { review.dispose(); await fs.rm(root, { recursive: true, force: true }); }

@@ -15,7 +15,7 @@ Use self-contained HTML with inline CSS and this JSON block, exactly once:
 </script>
 ```
 
-Both commits must be available locally. For PR-style comparisons, resolve the merge base and use its SHA for `base`. Use `head: "working-tree"` for saved files, including staged and unstaged changes. Unsaved buffers are excluded. Optional `repository` is an open workspace folder name, required in multi-root workspaces. Paths are relative to that folder's Git root.
+Both commits must be available locally. For PR-style comparisons, resolve the merge base and use its SHA for `base`. Use `head: "working-tree"` for local changes: the right side opens the real editable file with normal language-extension support and includes unsaved editor content. The changed-file tree and counts use saved files at load/reload time. Optional `repository` is an open workspace folder name, required in multi-root workspaces. Paths are relative to that folder's Git root.
 
 For canvas mode, include exactly one top-level inline SVG marked `data-flowrider-canvas`, with a finite positive `viewBox`. Put all visible content inside it. Example:
 
@@ -40,7 +40,7 @@ Place marked SVGs in normal-flow containers such as `figure` or `div` that allow
 
 Use real anchors around SVG nodes or text. `path` is URL-encoded and `line` is a positive 1-based line on the right side. Escape `&` as `&amp;` in HTML attributes. Optional `basePath` identifies a pre-rename path. Deleted-only lines have no right-side target; link to surviving callers or explain the deletion in prose.
 
-No line remapping occurs. Validate each path and line against the specified head or saved file. Prefer immutable SHAs for shared reviews. Report missing commits or uncertain entry points rather than inventing targets.
+No line remapping occurs. Validate each path and line against the specified head or working file. If only disk contents are available, tell the user that unsaved editor edits can shift working-tree targets. Prefer immutable SHAs for shared reviews. Report missing commits or uncertain entry points rather than inventing targets.
 
 Scripts, remote assets, forms and external navigation are disabled. Use inline SVG rather than an SVG image when internal links must work. Avoid external fonts. Do not embed secrets or credentials in the artifact.
 

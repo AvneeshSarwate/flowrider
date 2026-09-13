@@ -152,12 +152,17 @@ export class DiffReview implements vscode.Disposable {
     parseReviewLink(`flowrider://diff?path=${encodeURIComponent(basePath)}&line=1`);
     const { metadata, root } = this.review;
     let right: string;
+    let rightUri: vscode.Uri | undefined;
     if (deleted) { right = ''; }
     else if (metadata.head === 'working-tree') {
       const target = await fs.realpath(path.join(root, file));
       const relative = path.relative(await fs.realpath(root), target);
       if (relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {throw new Error('File resolves outside the repository.');}
-      right = await fs.readFile(target, 'utf8');
+      // Preserve the workspace path for language-server project association.
+      // Validate the resolved target above, but share VS Code's live document
+      // (including unsaved edits) rather than creating a virtual snapshot.
+      rightUri = vscode.Uri.file(path.join(root, file));
+      right = (await vscode.workspace.openTextDocument(rightUri)).getText();
     } else {right = await this.git(root, ['show', `${metadata.head}:${file}`]);}
     if (right.includes('\0')) {throw new Error('Binary files are not supported.');}
     if (line > right.split('\n').length) {throw new Error(`Line ${line} is beyond the end of ${file}. Regenerate the diagram to update links.`);}
@@ -176,7 +181,7 @@ export class DiffReview implements vscode.Disposable {
         this.column = vscode.ViewColumn.Beside;
       }
     }
-    await vscode.commands.executeCommand('vscode.diff', makeUri(metadata.base, basePath, left), makeUri(metadata.head, file, right),
+    await vscode.commands.executeCommand('vscode.diff', makeUri(metadata.base, basePath, left), rightUri ?? makeUri(metadata.head, file, right),
       `${file} · ${metadata.base.slice(0, 8)} → ${metadata.head.slice(0, 12)}`, {
         viewColumn: this.column, preview: true, selection: new vscode.Range(line - 1, 0, line - 1, 0),
       });

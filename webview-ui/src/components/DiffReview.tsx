@@ -76,6 +76,22 @@ export default function DiffReview() {
           catch (error) { setError(error instanceof Error ? error.message : String(error)); }
         }
         if (doc && mode === 'document') disposeEmbedded.current = attachEmbeddedDiagrams(doc, setError);
+        // Nested sandboxed frames don't reliably participate in VS Code's
+        // native Copy command. Send selected text through the trusted host.
+        const copySelection = () => {
+          const text = doc?.getSelection()?.toString();
+          if (!text || !vscode) return false;
+          vscode.postMessage({ type: 'copyReviewText', text });
+          return true;
+        };
+        doc?.addEventListener('keydown', e => {
+          if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'c' && copySelection()) {
+            e.preventDefault(); e.stopPropagation();
+          }
+        }, true);
+        doc?.addEventListener('copy', e => {
+          if (copySelection()) e.preventDefault();
+        });
         doc?.addEventListener('click', e => {
           const anchor = (e.target as Element).closest('a');
           const href = anchor?.getAttribute('href') ?? anchor?.getAttribute('xlink:href');

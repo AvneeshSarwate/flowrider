@@ -229,6 +229,7 @@ export type ExtensionMessage =
     };
 
 export type WebviewMessage =
+  | { type: 'copyReviewText'; text: string }
   | { type: 'loadReview'; reload?: boolean }
   | { type: 'requestReview' }
   | { type: 'openReviewLink'; href: string }

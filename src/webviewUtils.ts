@@ -87,6 +87,12 @@ export class FlowWebviewManager {
   }
 
   async handleMessage(message: WebviewMessage, sender: WebviewHost | null = this.activeHost): Promise<void> {
+    if (message.type === 'copyReviewText') {
+      if (typeof message.text !== 'string' || !message.text) { return; }
+      try { await vscode.env.clipboard.writeText(message.text); }
+      catch (error) { sender?.postMessage({ type: 'reviewError', error: `Could not copy text: ${String(error)}` }); }
+      return;
+    }
     if (message.type === 'loadReview' || message.type === 'requestReview' || message.type === 'openReviewLink' || message.type === 'openReviewFile') {
       try {
         if (message.type === 'openReviewLink') { await this.review.open(message.href); }

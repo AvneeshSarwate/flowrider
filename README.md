@@ -6,7 +6,9 @@ A VS Code extension for visualizing and navigating code flows. Write specially f
 
 ### Diff Review
 
-Switch to **Diff Review** in the sidebar and choose **Load HTML** to view an agent-generated review diagram. Links open native diffs at exact right-side lines, comparing two commits or a commit against saved working-tree files. No stale-line remapping is performed.
+Switch to **Diff Review** in the sidebar and choose **Load HTML** to view an agent-generated review diagram. Links open native diffs at exact right-side lines, comparing two commits or a commit against working-tree files. No stale-line remapping is performed.
+
+For working-tree reviews, the right side is the real, editable workspace file, enabling normal language-extension features such as Cmd/Ctrl-click definition navigation, hover, and completion. It includes unsaved editor changes; link lines are validated against that live document. Tree counts still reflect saved files as of the last review load/reload. Commit snapshots and deleted-file placeholders remain virtual documents.
 
 The changed-file tree shows green added-line and red removed-line counts. Directory totals are shown only when collapsed and include all descendants, even when filtering. Use the **LOC / Significant LOC** toggle beside Expand all / Collapse all to switch metrics. Significant LOC is an approximation that excludes blank lines and common comment-only line patterns for recognized file types; it is not a full language-parser metric. Binary files show “Binary” instead of counts.
 
